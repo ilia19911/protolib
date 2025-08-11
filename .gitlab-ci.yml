@@ -1,0 +1,144 @@
+stages:
+  - build
+  - test
+  - coverage
+  - release
+
+variables:
+  CMAKE_BUILD_TYPE: Release
+  GIT_DEPTH: "0"              # semantic-release needs full history
+  NPM_CONFIG_FUND: "false"
+  NPM_CONFIG_AUDIT: "false"
+
+default:
+  tags:
+    - ubuntu24  # укажи тег своего раннера
+
+before_script:
+  - apt-get update -yq -o Acquire::Retries=3 && apt-get install -y --no-install-recommends cmake gcovr lcov && rm -rf /var/lib/apt/lists/*
+
+
+build:
+  stage: build
+  script:
+    - cmake -S . -B build -DCMAKE_BUILD_TYPE=Release DPROTOLIB_VERSION=$VERSION -DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_C_FLAGS="--coverage" -DBUILD_TESTING=ON -DPROTOLIB_COVERAGE=ON
+    - cmake --build build -- -j"$(nproc)"
+  artifacts:
+    paths:
+      - build/
+    expire_in: 1 week
+
+test:
+  stage: test
+  needs: ["build"]
+  script:
+    - cd build
+    - ctest --output-on-failure --no-tests=error -j "$(nproc)" --output-junit junit.xml
+  artifacts:
+    reports:
+      junit: build/junit.xml
+    paths:
+      - build/             # сохраняем gcda/gcno для следующей стадии
+      - build/junit.xml
+    expire_in: 1 week
+
+coverage:
+  stage: coverage
+  needs: ["test"]
+  coverage: '/^TOTAL.*?(\d+(?:\.\d+)?)%/'
+  script:
+    - cd build
+    - lcov --capture --directory . --output-file coverage.info --ignore-errors inconsistent --rc geninfo_unexecuted_blocks=1
+    - lcov --remove coverage.info '/usr/*' --output-file coverage.info
+    - lcov --list coverage.info
+    - gcovr -r .. --xml-pretty --cobertura-pretty -o coverage.xml
+    - gcovr -r .. --html --html-details -o coverage.html
+    - gcovr -r .. --txt --print-summary | tee coverage.txt
+  artifacts:
+    paths:
+      - build/coverage.html
+      - build/coverage.xml
+      - build/coverage.txt
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: build/coverage.xml
+
+semantic_release:
+  stage: release
+  needs:
+    - job: build
+      artifacts: true
+  tags:
+    - ubuntu24
+  cache:
+    key: npm-${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+  before_script:
+    - node -v && npm -v
+    - |
+      if [ -f package-lock.json ]; then
+        npm ci --no-audit --prefer-offline
+      else
+        npm install --no-audit --no-fund --prefer-offline
+      fi
+  script:
+    - npx semantic-release
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: on_success
+    - when: never
+  artifacts:
+    when: always
+    paths:
+      - CHANGELOG.md
+      - .pkg_version
+      - semrel.env
+    reports:
+      dotenv: semrel.env
+
+
+conan_publish:
+  stage: release
+  needs:
+    - job: semantic_release
+      artifacts: true
+  tags:
+    - ubuntu24
+  variables:
+    PACKAGE_NAME: "protolib"
+    CONAN_REMOTE_NAME: "insitech"   # default remote if not set in CI vars
+  script:
+    # ensure conan present
+    - |
+      if ! command -v conan >/dev/null 2>&1; then
+        apt-get update -yq -o Acquire::Retries=3
+        apt-get install -y --no-install-recommends python3-pip
+        python3 -m pip install --user "conan>=2.3,<3"
+        export PATH="$HOME/.local/bin:$PATH"
+      fi
+    - conan --version
+    # run only when semantic-release produced a version
+    - |
+      if [ ! -f .pkg_version ]; then
+        echo "No .pkg_version produced by semantic-release — skipping conan_publish."
+        exit 0
+      fi
+    - VERSION=$(cat .pkg_version)
+    - echo "Creating ${PACKAGE_NAME}/${VERSION}"
+    - conan create . --version=$VERSION -s:h build_type=Release
+    - conan upload protolib/$VERSION -r=$CONAN_REMOTE_NAME
+
+
+  rules:
+    # Run on default branch pipelines (same condition as semantic_release). Skip internally if no .pkg_version.
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: on_success
+    # Also allow manual tag pipelines (in case you push a tag yourself)
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+    - when: never
+
+
+
