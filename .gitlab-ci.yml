@@ -130,7 +130,6 @@ conan_publish:
     - conan create . --version=$VERSION -s:h build_type=Release
     - conan upload protolib/$VERSION -r=$CONAN_REMOTE_NAME
 
-
   rules:
     # Run on default branch pipelines (same condition as semantic_release). Skip internally if no .pkg_version.
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "merge_request_event"'
