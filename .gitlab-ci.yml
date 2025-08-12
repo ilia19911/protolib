@@ -12,7 +12,7 @@ variables:
 
 default:
   tags:
-    - ubuntu24  # укажи тег своего раннера
+    - ubuntu24_embedded  # укажи тег своего раннера
 
 before_script:
   - apt-get update -yq -o Acquire::Retries=3 && apt-get install -y --no-install-recommends cmake gcovr lcov && rm -rf /var/lib/apt/lists/*
@@ -70,7 +70,7 @@ semantic_release:
     - job: build
       artifacts: true
   tags:
-    - ubuntu24
+    - ubuntu24_embedded
   cache:
     key: npm-${CI_COMMIT_REF_SLUG}
     paths:
@@ -105,7 +105,7 @@ conan_publish:
     - job: semantic_release
       artifacts: true
   tags:
-    - ubuntu24
+    - ubuntu24_embedded
   variables:
     PACKAGE_NAME: "protolib"
     CONAN_REMOTE_NAME: "insitech"   # default remote if not set in CI vars
