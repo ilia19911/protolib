@@ -387,7 +387,7 @@ class HostLacteProtocol{
   std::mutex receive_mtx_;
   bool received_{false};
   std::condition_variable received_cv_;
-  static constexpr std::chrono::duration receive_timeout_ = std::chrono::milliseconds{10};
+  static constexpr std::chrono::duration receive_timeout_ = std::chrono::milliseconds{1000};
 };
 
 template<uint8_t *RX_BASE, uint8_t *TX_BASE>
