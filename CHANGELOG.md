@@ -1,3 +1,10 @@
+## [1.1.2](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.1.1...v1.1.2) (2025-08-14)
+
+
+### Bug Fixes
+
+* **root permission:** убрал установку пакетов в таске publish ([ca5ae85](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/ca5ae858ccda107ebcea316cd227a081092aa0e8))
+
 ## [1.1.1](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.1.0...v1.1.1) (2025-08-14)
 
 
