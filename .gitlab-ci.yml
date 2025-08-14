@@ -21,7 +21,7 @@ before_script:
 build:
   stage: build
   script:
-    - cmake -S . -B build -DCMAKE_BUILD_TYPE=Release DPROTOLIB_VERSION=$VERSION -DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_C_FLAGS="--coverage" -DBUILD_TESTING=ON -DPROTOLIB_COVERAGE=ON
+    - cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DPROTOLIB_VERSION=$VERSION -DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_C_FLAGS="--coverage" -DBUILD_TESTING=ON -DPROTOLIB_COVERAGE=ON
     - cmake --build build -- -j"$(nproc)"
   artifacts:
     paths:
