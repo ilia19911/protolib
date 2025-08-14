@@ -1,3 +1,11 @@
+# [1.2.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.1.2...v1.2.0) (2025-08-14)
+
+
+### Features
+
+* **devops:** перенес основную логику cicd в отдельный проект ([c18aeb5](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/c18aeb5a8e3a78fb51cf9d5f286de725009a95fb))
+* **devops:** поправил путь ([0be4530](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/0be4530271bd5d750b9c70cad953294259fd45d4))
+
 ## [1.1.2](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.1.1...v1.1.2) (2025-08-14)
 
 
