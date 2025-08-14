@@ -2,11 +2,11 @@ include_guard(GLOBAL)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-if(NOT DEFINED PROTOLIB_VERSION)
-  message(FATAL_ERROR "PROTOLIB_VERSION is not defined before including install.cmake")
+if(NOT DEFINED SOFTWARE_VERSION)
+  message(FATAL_ERROR "SOFTWARE_VERSION is not defined before including install.cmake")
 endif()
 
-set(PROTOLIB_CMAKE_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/protolib-${PROTOLIB_VERSION}")
+set(PROTOLIB_CMAKE_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/protolib-${SOFTWARE_VERSION}")
 
 set(PROTOLIB_TARGETS
         protolib_interfaces
@@ -46,7 +46,7 @@ endif()
 
 write_basic_package_version_file(
         "${CMAKE_CURRENT_BINARY_DIR}/protolibConfigVersion.cmake"
-        VERSION "${PROTOLIB_VERSION}"
+        VERSION "${SOFTWARE_VERSION}"
         COMPATIBILITY SameMajorVersion
 )
 
