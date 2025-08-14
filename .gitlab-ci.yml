@@ -108,18 +108,17 @@ conan_publish:
     - ubuntu24_embedded
   variables:
     PACKAGE_NAME: "protolib"
-    CONAN_REMOTE_NAME: "insitech"   # default remote if not set in CI vars
+    CONAN_REMOTE_NAME: "insitech"
+    PATH: "$HOME/.local/bin:$PATH"   # чтобы pip --user работал
   script:
-    # ensure conan present
+    # 1. Устанавливаем conan в user-space, если его нет
     - |
       if ! command -v conan >/dev/null 2>&1; then
-        apt-get update -yq -o Acquire::Retries=3
-        apt-get install -y --no-install-recommends python3-pip
         python3 -m pip install --user "conan>=2.3,<3"
-        export PATH="$HOME/.local/bin:$PATH"
       fi
     - conan --version
-    # run only when semantic-release produced a version
+
+    # 2. Проверяем, есть ли версия из semantic-release
     - |
       if [ ! -f .pkg_version ]; then
         echo "No .pkg_version produced by semantic-release — skipping conan_publish."
@@ -127,14 +126,15 @@ conan_publish:
       fi
     - VERSION=$(cat .pkg_version)
     - echo "Creating ${PACKAGE_NAME}/${VERSION}"
-    - conan create . --version=$VERSION -s:h build_type=Release
-    - conan upload protolib/$VERSION -r=$CONAN_REMOTE_NAME
+
+    # 3. Создаем и загружаем пакет
+    - conan create . --version="$VERSION" -s:h build_type=Release
+    - conan upload "${PACKAGE_NAME}/${VERSION}" -r="$CONAN_REMOTE_NAME" --all --confirm
 
   rules:
-    # Run on default branch pipelines (same condition as semantic_release). Skip internally if no .pkg_version.
+    # Запуск на main и по тегу
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "merge_request_event"'
       when: on_success
-    # Also allow manual tag pipelines (in case you push a tag yourself)
     - if: '$CI_COMMIT_TAG'
       when: on_success
     - when: never
