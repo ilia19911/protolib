@@ -1,5 +1,5 @@
 include:
-  - project: 'embedded/devops/ci-templates'
+  - project: 'ComFort/embedded/devops/ci-templates'
     ref: develop        # или нужная ветка/тег
     file: '/cpp-basic-pipeline.yml'
 
