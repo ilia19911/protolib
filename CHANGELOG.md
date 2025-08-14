@@ -1,3 +1,10 @@
+## [1.1.1](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.1.0...v1.1.1) (2025-08-14)
+
+
+### Bug Fixes
+
+* **rxContainer:** контейнер печатает дебажный вывод до отправки ([b940f4e](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/b940f4ea57e478623bf13a825dec3dede2360edc))
+
 # [1.1.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0...v1.1.0) (2025-08-12)
 
 
