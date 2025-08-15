@@ -33,12 +33,12 @@ class ProtoLibConan(ConanFile):
 
     def generate(self):
         tc = CMakeToolchain(self)
-        tc.variables["BUILD_TESTING"] = "OFF"
-        tc.variables["INSTALL_GTEST"] = "OFF"
-        tc.variables["BUILD_GTEST"] = "OFF"
-        tc.variables["BUILD_GMOCK"] = "OFF"
-        tc.variables["BUILD_PACKAGE"] = "ON"
-        tc.variables["SOFTWARE_VERSION"] = str(self.version or "")
+        # tc.variables["BUILD_TESTING"] = "OFF"
+        # tc.variables["INSTALL_GTEST"] = "OFF"
+        # tc.variables["BUILD_GTEST"] = "OFF"
+        # tc.variables["BUILD_GMOCK"] = "OFF"
+        # tc.variables["BUILD_PACKAGE"] = "ON"
+        # tc.variables["SOFTWARE_VERSION"] = str(self.version or "")
         tc.generate()
         self.output.info(f"[protolib] generate(): SOFTWARE_VERSION={self.version}")
 
@@ -47,6 +47,7 @@ class ProtoLibConan(ConanFile):
         cmake.configure(variables={
             "BUILD_TESTING": "OFF",
             "BUILD_CONAN": "OFF",
+            "BUILD_PACKAGE": "ON",
             "SOFTWARE_VERSION": str(self.version or ""),
         })
         cmake.build()
