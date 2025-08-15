@@ -1,3 +1,10 @@
+## [1.2.1](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.0...v1.2.1) (2025-08-15)
+
+
+### Bug Fixes
+
+* **devops:** перенос ci в отдельный проект ([81ed0b2](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/81ed0b2be328aef2fd1ac9a76dd36c23be1ef6b6))
+
 # [1.2.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.1.2...v1.2.0) (2025-08-14)
 
 
