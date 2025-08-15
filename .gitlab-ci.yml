@@ -7,5 +7,3 @@ include:
 variables:
   CMAKE_BUILD_TYPE: "Release"
 
-default:
-  tags: [ubuntu24_embedded]
