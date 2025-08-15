@@ -1,3 +1,10 @@
+## [1.2.4](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.3...v1.2.4) (2025-08-15)
+
+
+### Bug Fixes
+
+* **conan:** была сломана сборка под arm ([d843b6a](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/d843b6a958e66bc276777519105341c727d62de8))
+
 ## [1.2.3](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.2...v1.2.3) (2025-08-15)
 
 
