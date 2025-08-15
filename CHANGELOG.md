@@ -1,3 +1,10 @@
+## [1.2.5](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.4...v1.2.5) (2025-08-15)
+
+
+### Bug Fixes
+
+* **conan:** проблема со сборкой пакета из за gtest ([67554c6](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/67554c635b0bc5a18e93a3352e0996483ee59aec))
+
 ## [1.2.4](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.3...v1.2.4) (2025-08-15)
 
 
