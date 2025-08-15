@@ -9,7 +9,9 @@ include(CTest)  # создаёт опцию BUILD_TESTING и если ON — в�
 include_directories(./include )
 include_directories(./)
 
-find_package(GTest CONFIG REQUIRED)
+if (BUILD_TESTING)
+    find_package(GTest CONFIG REQUIRED)
+endif()
 
 add_subdirectory(include/prototypes)
 add_subdirectory(libraries)
