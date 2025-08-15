@@ -16,4 +16,3 @@ add_subdirectory(libraries)
 add_subdirectory(protocols)
 
 include(./install.cmake)
-
