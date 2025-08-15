@@ -6,4 +6,5 @@ include:
 # при необходимости можно переопределить переменные/образ
 variables:
   CMAKE_BUILD_TYPE: "Release"
+  PKG_NAME: "protolib"
 
