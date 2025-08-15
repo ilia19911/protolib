@@ -1,3 +1,10 @@
+## [1.2.3](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.2...v1.2.3) (2025-08-15)
+
+
+### Bug Fixes
+
+* **conan:** не брал версию из пакета ([b57c229](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/b57c2297d6fa67310806c134031015602274ea14))
+
 ## [1.2.2](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.1...v1.2.2) (2025-08-15)
 
 
