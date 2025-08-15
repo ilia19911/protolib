@@ -1,3 +1,10 @@
+## [1.2.2](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.1...v1.2.2) (2025-08-15)
+
+
+### Bug Fixes
+
+* **conan:** небыло профайла default ([8dbffd6](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/8dbffd64be4c29516970add6fabedcb8a8ea6dd4))
+
 ## [1.2.1](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.0...v1.2.1) (2025-08-15)
 
 
