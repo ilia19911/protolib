@@ -88,10 +88,10 @@ class ProtoLibConan(ConanFile):
         c["crc16_modbus"].set_property("cmake_target_name", "protolib::crc16_modbus")
         c["crc16_modbus"].libs = ["protolib_crc16_modbus"]
 
-        c["lacte"].set_property("cmake_target_name", "protolib::lacte")
-        c["lacte"].libs = ["protolib_lacte"]
-        c["lacte"].requires = ["interfaces", "crc_soft", "crc16_modbus", "fields"]
+        # c["lacte"].set_property("cmake_target_name", "protolib::lacte")
+        # c["lacte"].libs = ["protolib_lacte"]
+        # c["lacte"].requires = ["interfaces", "crc_soft", "crc16_modbus", "fields"]
 
         # зонтик — НО НЕ НАЗЫВАЙ его "protolib"
         c["all"].set_property("cmake_target_name", "protolib::all")
-        c["all"].requires = ["fields", "interfaces", "crc_soft", "crc16_modbus", "containers", "lacte"]
+        c["all"].requires = ["fields", "interfaces", "crc_soft", "crc16_modbus", "containers"]
