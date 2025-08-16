@@ -11,33 +11,59 @@
 
 namespace proto
 {
-struct FieldMismatchInfo{
-    uint8_t expected[20];
-    uint8_t received[20];
-    std::string text;
-    size_t size;
-    size_t offset;
-    uint8_t *const_value;
-};
+    struct FieldMismatchInfo{
+        uint8_t expected[20];
+        uint8_t received[20];
+        std::string text;
+        size_t size;
+        size_t offset;
+        uint8_t *const_value;
+        std::string name;
+    };
 
-template <typename Field>
-static inline FieldMismatchInfo FillMismatchError(Field& field, uint8_t* expected, size_t received_size)
-{
-    FieldMismatchInfo result{}; // value-init
-    result.size        = field.GetSize();
-    result.offset      = field.GetOffset();
-    result.const_value = field.const_value_;
+    template <typename Field>
+    static inline FieldMismatchInfo FillMismatchError(Field& field, uint8_t* expected, size_t received_size)
+    {
+        FieldMismatchInfo result{}; // value-init
+        result.size        = field.GetSize();
+        result.offset      = field.GetOffset();
+        result.const_value = field.const_value_;
+        result.name        = ToString(field.GetName());
 
-    // clamp the copy size to the buffers we have
-    const size_t max_copy = sizeof(result.expected);
-    if (received_size > max_copy) {
-        received_size = max_copy;
+        // clamp the copy size to the buffers we have
+        const size_t max_copy = sizeof(result.expected);
+        if (received_size > max_copy) {
+            received_size = max_copy;
+        }
+
+        std::memcpy(result.expected, expected, received_size);
+        std::memcpy(result.received, field.GetData(), received_size);
+        return result;
     }
 
-    std::memcpy(result.expected, expected, received_size);
-    std::memcpy(result.received, field.GetData(), received_size);
-    return result;
-}
+    inline void DebugPrintMismatch(const FieldMismatchInfo& info) {
+        std::cout << "[FieldMismatch] offset=" << info.offset
+                  << " size=" << info.size
+                  << " text=" << info.text << "\n";
+
+        auto dump = [](const char* label, const uint8_t* data, size_t size) {
+            std::cout << "  " << label << ": ";
+            for (size_t i = 0; i < size; i++) {
+                if (i && i % 16 == 0) std::cout << "\n           ";
+                std::cout << std::hex << std::setw(2) << std::setfill('0')
+                          << static_cast<int>(data[i]) << " ";
+            }
+            std::cout << std::dec << "\n";
+        };
+
+        dump("expected", info.expected, info.size);
+        dump("received", info.received, info.size);
+
+        if (info.const_value) {
+            dump("const", info.const_value, info.size);
+        }
+    }
+
     template<typename Fields, typename TCrc = CrcSoft>
     class RxContainer : public FieldContainer<Fields, TCrc>
     {
@@ -131,6 +157,10 @@ static inline FieldMismatchInfo FillMismatchError(Field& field, uint8_t* expecte
                     for(int i = 0; i < byte_to_read; i ++){
                         if(ptr[i] != field.const_value_[field.GetSize() - 1 - field.read_count_ - i]){
                             ++read;
+                            if(this->IsDebug()){
+                                auto mismatch = FillMismatchError(field, (uint8_t*)field.const_value_, byte_to_read);
+                                DebugPrintMismatch(mismatch);
+                            }
                             return MatchStatus::NOT_MATCH;
                         }
                     }
@@ -138,6 +168,10 @@ static inline FieldMismatchInfo FillMismatchError(Field& field, uint8_t* expecte
                 else{
                     if(std::memcmp(ptr.data(), (uint8_t*)field.const_value_ + field.read_count_, byte_to_read) != 0){
                         ++read;
+                        if(this->IsDebug()){
+                            auto mismatch = FillMismatchError(field, (uint8_t*)field.const_value_, byte_to_read);
+                            DebugPrintMismatch(mismatch);
+                        }
                         return MatchStatus::NOT_MATCH;
                     }
                 }
@@ -188,7 +222,8 @@ static inline FieldMismatchInfo FillMismatchError(Field& field, uint8_t* expecte
                     if (len != data_field.GetSize()) {
                         if(container.IsDebug()){
                             auto expected = *len_field.GetData() + (data_field.GetSize() - len);
-                            FillMismatchError(len_field, (uint8_t*)&expected,  len_field.GetSize());
+                            auto mismatch = FillMismatchError(len_field, (uint8_t*)&expected,  len_field.GetSize());
+                            DebugPrintMismatch(mismatch);
                         }
                         return MatchStatus::NOT_MATCH;
                     }
@@ -209,6 +244,10 @@ static inline FieldMismatchInfo FillMismatchError(Field& field, uint8_t* expecte
             alen = ~alen;
 
             bool result = len == alen;
+            if(container.IsDebug() && not result){
+                auto mismatch = FillMismatchError(*container.template Get<FieldName::ALEN_FIELD>(), len,  *container.template Get<FieldName::ALEN_FIELD>().GetSize());
+                DebugPrintMismatch(mismatch);
+            }
             return result ? MatchStatus::MATCH : MatchStatus::NOT_MATCH;
         }
 
@@ -228,6 +267,10 @@ static inline FieldMismatchInfo FillMismatchError(Field& field, uint8_t* expecte
             });
 
             bool result = crc_in_field == static_cast<decltype(crc_in_field)>(crc);
+            if(container.IsDebug() && not result){
+                auto mismatch = FillMismatchError(*container.template Get<FieldName::CRC_FIELD>(), crc_in_field,  *container.template Get<FieldName::CRC_FIELD>().GetSize());
+                DebugPrintMismatch(mismatch);
+            }
             return result? MatchStatus::MATCH : MatchStatus::NOT_MATCH;
         }
 
@@ -245,6 +288,13 @@ static inline FieldMismatchInfo FillMismatchError(Field& field, uint8_t* expecte
             size_t packet_size = data_field.GetSize();
             if(packet_size!= kAnySize ){
                 if(data_field.size_!=0 && data_field.size_ !=packet_size){
+
+                    if(container.IsDebug()){
+                        std::cout << "Mismatch in data field size(method CheckType): expected size" << packet_size
+                                  << ", got " << data_field.size_ << std::endl;
+                        std::cout << "Type field value: " << type << std::endl;
+                    }
+
                     return MatchStatus::NOT_MATCH;
                 }
                 else{
