@@ -1,3 +1,10 @@
+## [1.2.7](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.6...v1.2.7) (2025-08-16)
+
+
+### Bug Fixes
+
+* **lacte:** убрал lacte библиотеку ([060c08f](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/060c08fded3aa5558ee2a9625c66953f37ba38ab))
+
 ## [1.2.6](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.5...v1.2.6) (2025-08-16)
 
 
