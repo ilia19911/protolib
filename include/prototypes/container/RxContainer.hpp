@@ -105,7 +105,7 @@ namespace proto
                         if(ptr[i] != field.const_value_[field.GetSize() - 1 - field.read_count_ - i]){
                             ++read;
                             if(this->IsDebug()){
-                                std::cout<< "Mismatch in field: " << FieldTraits<decltype(field)>::name << " at position: " << field.read_count_ + i << std::endl;
+                                std::cout<< "Mismatch in field: " << ToString(FieldTraits<decltype(field)>::name) << " at position: " << field.read_count_ + i << std::endl;
                                 std::cout << "Expected: " << (uint8_t)field.const_value_[field.GetSize() - 1 - field.read_count_ - i] << ", Received: " << (uint8_t)ptr[i] << std::endl;
                             }
                             return MatchStatus::NOT_MATCH;
