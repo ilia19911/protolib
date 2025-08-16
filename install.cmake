@@ -15,7 +15,7 @@ set(PROTOLIB_TARGETS
         protolib_crc
         protolib_fields
         protolib_containers
-        protolib_lacte
+#        protolib_lacte
 )
 
 install(TARGETS ${PROTOLIB_TARGETS}
