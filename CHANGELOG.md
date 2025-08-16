@@ -1,3 +1,10 @@
+# [1.5.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.4.0...v1.5.0) (2025-08-16)
+
+
+### Features
+
+* **debug:** сделал тестовый вывод ([a6a63fe](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/a6a63feacba087aaaebd3f72d37d553d4c0b05ea))
+
 # [1.4.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.3.0...v1.4.0) (2025-08-16)
 
 
