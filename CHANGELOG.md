@@ -1,3 +1,10 @@
+## [1.2.6](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.5...v1.2.6) (2025-08-16)
+
+
+### Bug Fixes
+
+* **lacte:** убрал протокол lacte ([8a220ac](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/8a220aca02944cb4b643c11606c1519813d1dfc3))
+
 ## [1.2.5](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.4...v1.2.5) (2025-08-15)
 
 
