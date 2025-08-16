@@ -1,3 +1,10 @@
+# [1.4.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.3.0...v1.4.0) (2025-08-16)
+
+
+### Features
+
+* **debug:** сделал дебажный вывод ошибок приема ([8bd39f9](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/8bd39f9bdefd516ee02ec604af5579a5ef6bee40))
+
 # [1.3.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.7...v1.3.0) (2025-08-16)
 
 
