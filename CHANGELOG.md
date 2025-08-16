@@ -1,3 +1,10 @@
+# [1.3.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.7...v1.3.0) (2025-08-16)
+
+
+### Features
+
+* **debug:** добавил дебажный вывод на поля ([45d4ef4](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/45d4ef45d370e8f5dcdf3dc039d0d093f33cf227))
+
 ## [1.2.7](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.2.6...v1.2.7) (2025-08-16)
 
 
