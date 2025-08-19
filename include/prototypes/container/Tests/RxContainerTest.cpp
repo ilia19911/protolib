@@ -96,6 +96,92 @@ TEST(RxContainerTest, CheckOffsetsSameBuffer){
     EXPECT_TRUE(received);
 }
 
+TEST(RxContainerTest, CheckDebugOut){
+    received = false;
+    TestRxContainer<proto::test::proto_fields>::delegate receive_handler = [](auto& container) {
+        received = true;
+    };
+    rxContainer.SetReceiveHandler(receive_handler);
+    rxContainer.Reset();
+    rxContainer.SetDebug(true);
+
+    size_t read = 0;
+
+
+    //check len
+    GetTestPack(RxBufferTest, testType);
+    Span<std::uint8_t> id(RxBufferTest , rxContainer.Get<proto::FieldName::ID_FIELD>().GetSize());
+    Span<std::uint8_t> len(RxBufferTest  + id.size(), rxContainer.Get<proto::FieldName::LEN_FIELD>().GetSize());
+    Span<std::uint8_t> alen(RxBufferTest  + id.size() + len.size(), rxContainer.Get<proto::FieldName::ALEN_FIELD>().GetSize());
+    Span<std::uint8_t> data(RxBufferTest + id.size() + len.size() + alen.size(), rxContainer.Get<proto::FieldName::DATA_FIELD>().GetSize());
+    Span<std::uint8_t> crc(RxBufferTest  + id.size() + len.size() +alen.size() + data.size(), rxContainer.Get<proto::FieldName::CRC_FIELD>().GetSize());
+
+    rxContainer.Fill(id, read);
+    len[0]+=1;
+    rxContainer.Fill(len, read);
+
+    GetTestPack(RxBufferTest, testType);
+    rxContainer.Fill(id, read);
+    rxContainer.Fill(len, read);
+    alen[0]+=1;
+    rxContainer.Fill(alen, read);
+
+    GetTestPack(RxBufferTest, testType);
+    rxContainer.Fill(id, read);
+    rxContainer.Fill(len, read);
+    rxContainer.Fill(alen, read);
+    rxContainer.Fill(data, read);
+    crc[0]+=1;
+    rxContainer.Fill(crc, read);
+
+    rxContainer.Reset();
+}
+
+TEST(RxContainerTest, CheckDebugOutComplex){
+    received = false;
+    TestRxContainer<proto::test::proto_fields2>::delegate receive_handler = [](auto& container) {
+        received = true;
+    };
+    rxContainer2.SetReceiveHandler(receive_handler);
+    rxContainer2.Reset();
+    rxContainer2.SetDebug(true);
+
+    size_t read = 0;
+
+    GetTestPack2(RxBufferTest, testType2);
+    Span<std::uint8_t> id(RxBufferTest , rxContainer2.Get<proto::FieldName::ID_FIELD>().GetSize());
+    Span<std::uint8_t> len(RxBufferTest  + id.size(), rxContainer2.Get<proto::FieldName::LEN_FIELD>().GetSize());
+    Span<std::uint8_t> alen(RxBufferTest  + id.size() + len.size(), rxContainer2.Get<proto::FieldName::ALEN_FIELD>().GetSize());
+    Span<std::uint8_t> type(RxBufferTest  + id.size() + len.size() + alen.size(), rxContainer2.Get<proto::FieldName::TYPE_FIELD>().GetSize());
+    Span<std::uint8_t> data(RxBufferTest + id.size() + len.size() + alen.size() + type.size(), sizeof(testType2));
+    Span<std::uint8_t> crc(RxBufferTest  + id.size() + len.size() +alen.size() + type.size() + data.size(), rxContainer2.Get<proto::FieldName::CRC_FIELD>().GetSize());
+
+    GetTestPack2(RxBufferTest, testType2);
+    rxContainer2.Fill(id, read);
+    rxContainer2.Fill(len, read);
+    alen[0]+=1;
+    rxContainer2.Fill(alen, read);
+
+    GetTestPack2(RxBufferTest, testType2);
+    rxContainer2.Fill(id, read);
+    rxContainer2.Fill(len, read);
+    rxContainer2.Fill(alen, read);
+    type[0] = 0;
+    rxContainer2.Fill(type, read);
+
+
+    GetTestPack2(RxBufferTest, testType2);
+    rxContainer2.Fill(id, read);
+    rxContainer2.Fill(len, read);
+    rxContainer2.Fill(alen, read);
+    rxContainer2.Fill(type, read);
+    rxContainer2.Fill(data, read);
+    crc[0]+=1;
+    rxContainer2.Fill(crc, read);
+
+    rxContainer2.Reset();
+}
+
 //TEST(RxContainerTest, CheckOffsetsDifferentBuffer){
 //    received = false;
 //    TestRxContainer<proto::test::proto_fields2>::delegate receive_handler = [](auto& container) {
