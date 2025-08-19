@@ -1,3 +1,10 @@
+# [1.0.0-dev.2](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.1...v1.0.0-dev.2) (2025-08-19)
+
+
+### Features
+
+* **devops:** поменял ветку devops проекта ([5c01398](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/5c013987247816aaf7a26853d362eebd086516c2))
+
 # [1.5.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.4.0...v1.5.0) (2025-08-16)
 
 
