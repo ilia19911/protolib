@@ -32,26 +32,10 @@ namespace proto
 
         template<typename... Infos>
         void SendPacket(Infos&&... infos) {
+            this->Reset();
             auto info_tuple = std::make_tuple(std::forward<Infos>(infos)...);
             using InfoTuple = decltype(info_tuple);
-//            if constexpr (FieldInfoHasName<FieldName::DATA_FIELD, decltype(tuple)>() &&
-//                    TxContainer<Fields>::template HasField<FieldName::TYPE_FIELD>()) {
-//                    auto &data_field = this->template Get<FieldName::DATA_FIELD>();
-//                    auto &type_field = this->template Get<FieldName::TYPE_FIELD>();
-//                    auto &data_info = GetFieldInfoByName< FieldName::DATA_FIELD>(tuple);
-//
-//                    using DataType = typename std::remove_reference_t<decltype(data_info)>::type;
-////                    using ValueType = typename std::remove_reference_t<decltype(type_field)>::FieldType;
-//
-//                    if constexpr (is_data_field_prototype<decltype(data_field)>::value) {
-//                        long long int packet_id = data_field.template GetNumber<DataType>();
-//                        data_field.SetId(packet_id);
-//
-//                        auto type_info = MakeFieldInfo<proto::FieldName::TYPE_FIELD>(&packet_id);
-//                        auto result = append_to_tuple(tuple, type_info);
-//                        ConstructPacket(result);
-//                    }
-//            }
+
             if constexpr (TxContainer<Fields>::template HasField<FieldName::DATA_FIELD>() &&
                           TxContainer<Fields>::template HasField<FieldName::TYPE_FIELD>()){
                 auto& data_field = this->template Get<FieldName::DATA_FIELD>();
@@ -63,10 +47,6 @@ namespace proto
                     if constexpr ( FieldInfoHasName<FieldName::TYPE_FIELD, InfoTuple>()){
                         auto &type_info = GetFieldInfoByName< FieldName::TYPE_FIELD>(info_tuple);
                         data_field.SetId(*type_info.data);
-//                        if (*type_info.data != packet_id){
-//                            int i = 0;
-////                            static_assert(false, "Mismatch type and data. Check info argument");
-//                        }
                         ConstructPacket(std::forward<Infos>(infos)...);
                     }
                     else{
@@ -77,8 +57,6 @@ namespace proto
                         auto expanded_tuple = std::tuple_cat(info_tuple, std::make_tuple(type_info));
                         ConstructPacketFromTuple(expanded_tuple);}
                     }
-
-//                    ConstructPacket(expended_tuple);}
             }
             else{
                 ConstructPacket(std::forward<Infos>(infos)...);
@@ -95,7 +73,7 @@ namespace proto
     private:
         template<typename InfoTuple>
         void ConstructPacketImpl(InfoTuple const& info_tuple) {
-            this->Reset();
+
 
             ForEachInfo(info_tuple, [&](auto const& info) {
                 using InfoT = std::decay_t<decltype(info)>;   // снимаем ссылки/const

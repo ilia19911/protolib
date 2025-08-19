@@ -99,11 +99,11 @@ namespace proto
                                             return MatchStatus::NOT_MATCH;
                                         };
 
-                                        std::cout << "---------------------" << std::endl;
+                                        std::cout << "-------------BROKEN PACKET START-------------" << std::endl;
                                         for (int i = 0; i <= this->field_index_; i++) {
                                             static_for_index(i, f);
                                         }
-                                        std::cout << "---------------------" << std::endl;
+                                        std::cout << "-------------BROKEN PACKET STOP-------------" << std::endl;
                                     }
                                 }
                                 this->Reset();
@@ -211,16 +211,18 @@ namespace proto
                 if (data_field.size_ != 0 && data_field.size_ != kAnySize) {
                     if (len != data_field.GetSize()) {
                         if(container.IsDebug()){
-                            auto expected = *len_field.GetData() + (data_field.GetSize() - len);
+                            auto expected = static_cast<unsigned>(*len_field.GetData())
+                                            + (data_field.GetSize() - static_cast<unsigned>(len));
+
                             std::ios_base::fmtflags f(std::cout.flags()); // сохранить формат
 
                             std::cout << "\nMismatch in length field (method SetDataLen):\n"
-                                      << "  Expected: " << std::dec << expected
-                                      << " (0x" << std::hex << std::uppercase << expected << ")\n"
-                                      << "  Received: " << std::dec << len
-                                      << " (0x" << std::hex << std::uppercase << len << ")\n";
+                                      << "  Expected: " << std::dec << static_cast<unsigned>(expected)
+                                      << " (0x" << std::hex << std::uppercase << static_cast<unsigned>(expected) << ")\n"
+                                      << "  Received: " << std::dec << static_cast<unsigned>(*len_field.GetData())
+                                      << " (0x" << std::hex << std::uppercase << static_cast<unsigned>(*len_field.GetData()) << ")\n";
 
-                            std::cout.flags(f); // восстановить исходный формат
+                            std::cout.flags(f); // восстановить
                         }
                         return MatchStatus::NOT_MATCH;
                     }
@@ -242,15 +244,19 @@ namespace proto
 
             bool result = len == alen;
             if(container.IsDebug() && not result){
-                std::ios_base::fmtflags f(std::cout.flags()); // сохранить текущее форматирование
+                auto to_uint = [](auto v) { return static_cast<unsigned>(v); };
+
+                auto f = std::cout.flags();
+                auto fill = std::cout.fill();
 
                 std::cout << "\nMismatch in ALEN field:\n"
-                          << "  Expected: " << std::dec << (~len)
-                          << " (0x" << std::hex << std::uppercase << (~len) << ")\n"
-                          << "  Received: " << std::dec << (~alen)
-                          << " (0x" << std::hex << std::uppercase << (~alen) << ")\n";
+                          << "  Expected: " << std::dec << to_uint(~len)
+                          << " (0x" << std::hex << std::uppercase << std::setw(2) << std::setfill('0') << to_uint(~len) << ")\n"
+                          << "  Received: " << std::dec << to_uint(~alen)
+                          << " (0x" << std::hex << std::uppercase << std::setw(2) << std::setfill('0') << to_uint(~alen) << ")\n";
 
-                std::cout.flags(f); // вернуть исходные флаги
+                std::cout.flags(f);
+                std::cout.fill(fill);
             }
             return result ? MatchStatus::MATCH : MatchStatus::NOT_MATCH;
         }
@@ -258,7 +264,8 @@ namespace proto
         static MatchStatus CheckCrc(void *obj){
             auto& container = *static_cast<RxContainer<Fields, TCrc>*>(obj);
             auto crc_in_field = *container.template Get<FieldName::CRC_FIELD>().GetData();
-            int crc = 0;
+            using crc_type = decltype(crc_in_field);
+            uint32_t crc = 0;
             container.crc_.Reset();
 
             container.for_each_type([&](auto& field){
@@ -272,15 +279,25 @@ namespace proto
 
             bool result = crc_in_field == static_cast<decltype(crc_in_field)>(crc);
             if(container.IsDebug() && not result){
-                std::ios_base::fmtflags f(std::cout.flags()); // сохраним формат
+                auto f = std::cout.flags();      // сохранить текущие флаги
+                auto fill = std::cout.fill();    // и текущий fill-символ
+
+                auto to_u = [](auto v) -> uint64_t { return static_cast<uint64_t>(v); };
+                crc_type c=-1;
+                const auto crc_exp = to_u(crc & c );
+                const auto crc_got = to_u(crc_in_field & c);
+
+                // ширина HEX по размеру исходного типа (если crc — uint16_t, будет 4; если uint32_t — 8)
+                constexpr int hexw = static_cast<int>(sizeof(crc) * 2);
 
                 std::cout << "\nMismatch in CRC field:\n"
-                          << "  Expected: " << std::dec << crc
-                          << " (0x" << std::hex << std::uppercase << crc << ")\n"
-                          << "  Received: " << std::dec << crc_in_field
-                          << " (0x" << std::hex << std::uppercase << crc_in_field << ")\n";
+                          << "  Expected: " << std::dec << crc_exp
+                          << " (0x" << std::hex << std::uppercase << std::setw(hexw) << std::setfill('0') << crc_exp << ")\n"
+                          << "  Received: " << std::dec << crc_got
+                          << " (0x" << std::hex << std::uppercase << std::setw(hexw) << std::setfill('0') << crc_got << ")\n";
 
-                std::cout.flags(f); // вернули исходные флаги
+                std::cout.flags(f);              // восстановить
+                std::cout.fill(fill);
             }
             return result? MatchStatus::MATCH : MatchStatus::NOT_MATCH;
         }
@@ -292,8 +309,22 @@ namespace proto
             auto& data_field = container.template Get<FieldName::DATA_FIELD>();
 
             if constexpr (is_data_field_prototype<decltype(data_field)>::value) {
-                if (not data_field.SetId(type)){
-                    return MatchStatus::NOT_MATCH;
+                if(container.IsDebug()) {
+                    if (not data_field.SetId(type)) {
+                        auto f = std::cout.flags();     // сохранить флаги
+                        auto fill = std::cout.fill();   // и символ заполнения
+                        auto to_u = [](auto v) -> uint64_t { return static_cast<uint64_t>(v); };
+                        const auto type_u = to_u(type);
+                        std::cout
+                                << "\n---------------------------\n"
+                                << "Incorrect type received (method CheckType):\n"
+                                << "  Received type id: " << std::dec << type_u
+                                << "\n---------------------------\n";
+
+                        std::cout.flags(f);             // восстановить формат флагов
+                        std::cout.fill(fill);           // восстановить fill-символ
+                        return MatchStatus::NOT_MATCH;
+                    }
                 }
             }
             size_t packet_size = data_field.GetSize();
@@ -301,17 +332,31 @@ namespace proto
                 if(data_field.size_!=0 && data_field.size_ !=packet_size){
 
                     if(container.IsDebug()){
-                        std::ios_base::fmtflags f(std::cout.flags());
+                        auto f = std::cout.flags();     // сохранить флаги
+                        auto fill = std::cout.fill();   // и символ заполнения
+
+                        auto to_u = [](auto v) -> uint64_t { return static_cast<uint64_t>(v); };
+
+                        const auto type_u   = to_u(type);
+                        const auto expect_u = to_u(packet_size);
+                        const auto got_u    = to_u(data_field.size_);
+
+                        // ширина HEX по размеру size_t (подходит для размеров буферов)
+                        constexpr int hexw = static_cast<int>(sizeof(size_t) * 2);
 
                         std::cout
                                 << "\n---------------------------\n"
-                                << "Mismatch in data field size (method CheckType): \n"
-                                << "Received type id: " << std::dec << type << "\n"
-                                << "Expected size for this type: " << std::hex << std::showbase << packet_size << "\n"
-                                << "Calculated size: " << std::hex << std::showbase << data_field.size_ << "\n"
+                                << "Mismatch in data field size (method CheckType):\n"
+                                << "  Received type id: " << std::dec << type_u
+                                << " (0x" << std::hex << std::uppercase << std::setw(hexw) << std::setfill('0') << type_u << ")\n"
+                                << "  Expected size:    " << std::dec << expect_u
+                                << " (0x" << std::hex << std::uppercase << std::setw(hexw) << std::setfill('0') << expect_u << ")\n"
+                                << "  Calculated size:  " << std::dec << got_u
+                                << " (0x" << std::hex << std::uppercase << std::setw(hexw) << std::setfill('0') << got_u << ")\n"
                                 << "---------------------------\n";
 
-                        std::cout.flags(f); // восстановили всё как было
+                        std::cout.flags(f);             // восстановить формат флагов
+                        std::cout.fill(fill);           // восстановить fill-символ
                     }
                     return MatchStatus::NOT_MATCH;
                 }

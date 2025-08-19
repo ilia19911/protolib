@@ -96,7 +96,7 @@ namespace proto{
         }
 
         void Reset() override  {
-//            current_id_ = -1;
+            current_id_ = -1;
             this->size_ = 0;
         }
     private:
