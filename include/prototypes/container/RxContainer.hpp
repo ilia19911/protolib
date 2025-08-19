@@ -69,6 +69,42 @@ namespace proto
                                 }
                                 if constexpr (I != 0 ){
                                     read = 0;
+//                                    if(this->IsDebug())
+                                    {
+                                        auto f = [this](auto index_c) -> MatchStatus {
+                                            constexpr std::size_t J = decltype(index_c)::value;
+                                            auto &field = std::get<J>(this->fields_);
+                                            std::cout << "Field " << ToString(FieldTraits<decltype(field)>::name)
+                                                      << " received: ";
+                                            {
+                                                // сохранить и восстановить формат потока
+                                                std::ios_base::fmtflags f(std::cout.flags());
+                                                auto old_fill = std::cout.fill();
+                                                std::cout << std::hex << std::uppercase << std::setfill('0');
+                                                for (size_t i = 0; i < static_cast<size_t>(field.read_count_ |
+                                                                                           field.GetSize() ); ++i) {
+                                                    uint8_t byte = *(field.begin() + i);
+                                                    // продвигаем к целочисленному типу, чтобы не печаталось как char
+                                                    unsigned v = static_cast<unsigned>(byte);
+                                                    // печатаем как 0xNN
+                                                    std::cout << " 0x" << std::setw(2) << v;
+                                                    if (i + 1 < static_cast<size_t>(field.read_count_))
+                                                        std::cout << ' ';
+                                                }
+                                                // вернуть формат
+                                                std::cout.flags(f);
+                                                std::cout.fill(old_fill);
+                                            }
+                                            std::cout << std::endl;
+                                            return MatchStatus::NOT_MATCH;
+                                        };
+
+                                        std::cout << "---------------------" << std::endl;
+                                        for (int i = 0; i <= this->field_index_; i++) {
+                                            static_for_index(i, f);
+                                        }
+                                        std::cout << "---------------------" << std::endl;
+                                    }
                                 }
                                 this->Reset();
                             }
@@ -105,8 +141,8 @@ namespace proto
                         if(ptr[i] != field.const_value_[field.GetSize() - 1 - field.read_count_ - i]){
                             ++read;
                             if(this->IsDebug()){
-                                std::cout<< "Mismatch in field: " << ToString(FieldTraits<decltype(field)>::name) << " at position: " << field.read_count_ + i << std::endl;
-                                std::cout << "Expected: " << (uint8_t)field.const_value_[field.GetSize() - 1 - field.read_count_ - i] << ", Received: " << (uint8_t)ptr[i] << std::endl;
+//                                std::cout<< "\nMismatch in field: " << ToString(FieldTraits<decltype(field)>::name) << " at position: " << field.read_count_ + i << std::endl;
+//                                std::cout << "Expected: " << (uint8_t)field.const_value_[field.GetSize() - 1 - field.read_count_ - i] << ", Received: " << (uint8_t)ptr[i] << std::endl;
                             }
                             return MatchStatus::NOT_MATCH;
                         }
@@ -116,15 +152,15 @@ namespace proto
                     if(std::memcmp(ptr.data(), (uint8_t*)field.const_value_ + field.read_count_, byte_to_read) != 0){
                         ++read;
                         if(this->IsDebug()){
-                            std::cout << "Mismatch in field: " << ToString(FieldTraits<decltype(field)>::name) << " at position: " << field.read_count_ << std::endl;
-                            std::cout << "Expected: ";
-                            for(size_t i = 0; i < byte_to_read; i++){
-                                std::cout << ((uint8_t*)field.const_value_)[field.read_count_ + i] << " ";
-                            }
-                            std::cout << ", Received: ";
-                            for(size_t i = 0; i < field.read_count_ + 1; i++) {
-                                std::cout << (uint8_t) ptr.data()[i] << " ";
-                            }
+//                            std::cout << "\nMismatch in field: " << ToString(FieldTraits<decltype(field)>::name) << " at position: " << field.read_count_ << std::endl;
+//                            std::cout << "Expected: ";
+//                            for(size_t i = 0; i < byte_to_read; i++){
+//                                std::cout << ((uint8_t*)field.const_value_)[field.read_count_ + i] << " ";
+//                            }
+//                            std::cout << ", Received: ";
+//                            for(size_t i = 0; i < field.read_count_ + 1; i++) {
+//                                std::cout << (uint8_t) ptr.data()[i] << " ";
+//                            }
                         }
                         return MatchStatus::NOT_MATCH;
                     }
@@ -176,8 +212,15 @@ namespace proto
                     if (len != data_field.GetSize()) {
                         if(container.IsDebug()){
                             auto expected = *len_field.GetData() + (data_field.GetSize() - len);
-                            std::cout << "Mismatch in length field (method SetDataLen): expected size "
-                                      << expected << ", got size" << len<< std::endl;
+                            std::ios_base::fmtflags f(std::cout.flags()); // сохранить формат
+
+                            std::cout << "\nMismatch in length field (method SetDataLen):\n"
+                                      << "  Expected: " << std::dec << expected
+                                      << " (0x" << std::hex << std::uppercase << expected << ")\n"
+                                      << "  Received: " << std::dec << len
+                                      << " (0x" << std::hex << std::uppercase << len << ")\n";
+
+                            std::cout.flags(f); // восстановить исходный формат
                         }
                         return MatchStatus::NOT_MATCH;
                     }
@@ -199,8 +242,15 @@ namespace proto
 
             bool result = len == alen;
             if(container.IsDebug() && not result){
-                std::cout << "Mismatch in ALEN field: expected " << ~len
-                          << ", got " << ~alen << std::endl;
+                std::ios_base::fmtflags f(std::cout.flags()); // сохранить текущее форматирование
+
+                std::cout << "\nMismatch in ALEN field:\n"
+                          << "  Expected: " << std::dec << (~len)
+                          << " (0x" << std::hex << std::uppercase << (~len) << ")\n"
+                          << "  Received: " << std::dec << (~alen)
+                          << " (0x" << std::hex << std::uppercase << (~alen) << ")\n";
+
+                std::cout.flags(f); // вернуть исходные флаги
             }
             return result ? MatchStatus::MATCH : MatchStatus::NOT_MATCH;
         }
@@ -222,8 +272,15 @@ namespace proto
 
             bool result = crc_in_field == static_cast<decltype(crc_in_field)>(crc);
             if(container.IsDebug() && not result){
-                std::cout << "Mismatch in CRC field: expected " << crc
-                          << ", got " << crc_in_field << std::endl;
+                std::ios_base::fmtflags f(std::cout.flags()); // сохраним формат
+
+                std::cout << "\nMismatch in CRC field:\n"
+                          << "  Expected: " << std::dec << crc
+                          << " (0x" << std::hex << std::uppercase << crc << ")\n"
+                          << "  Received: " << std::dec << crc_in_field
+                          << " (0x" << std::hex << std::uppercase << crc_in_field << ")\n";
+
+                std::cout.flags(f); // вернули исходные флаги
             }
             return result? MatchStatus::MATCH : MatchStatus::NOT_MATCH;
         }
@@ -244,11 +301,18 @@ namespace proto
                 if(data_field.size_!=0 && data_field.size_ !=packet_size){
 
                     if(container.IsDebug()){
-                        std::cout << "Mismatch in data field size(method CheckType): expected size" << packet_size
-                                  << ", got " << data_field.size_ << std::endl;
-                        std::cout << "Type field value: " << type << std::endl;
-                    }
+                        std::ios_base::fmtflags f(std::cout.flags());
 
+                        std::cout
+                                << "\n---------------------------\n"
+                                << "Mismatch in data field size (method CheckType): \n"
+                                << "Received type id: " << std::dec << type << "\n"
+                                << "Expected size for this type: " << std::hex << std::showbase << packet_size << "\n"
+                                << "Calculated size: " << std::hex << std::showbase << data_field.size_ << "\n"
+                                << "---------------------------\n";
+
+                        std::cout.flags(f); // восстановили всё как было
+                    }
                     return MatchStatus::NOT_MATCH;
                 }
                 else{
