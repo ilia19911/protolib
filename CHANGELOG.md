@@ -1,3 +1,10 @@
+# 1.0.0-dev.1 (2025-08-19)
+
+
+### Features
+
+* **debug:** добавил вывод нераспарсиного пакета ([5863bb2](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/5863bb206f3a44ecb0cb3974aa2c5f35d9296429))
+
 # [1.5.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.4.0...v1.5.0) (2025-08-16)
 
 
