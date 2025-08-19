@@ -89,6 +89,7 @@ TEST(PingPongContainerTest, SanyCaseType2){
     interface.Open();
     interface.AddReceiveCallback(transmitHandler);
     txContainer2.SetInterface(interface);
+    //rxContainer2.SetDebug(true);
 
     rxContainer2.SetReceiveHandler(receiveHandler);
     received = false;
@@ -109,6 +110,7 @@ TEST(PingPongContainerTest, SanyCaseType2){
 
 TEST(PingPongContainerTest, NoiseType2){
     received = false;
+//    rxContainer2.SetDebug(true);
     uint8_t noise[] = {4,2,6,7,34,67,44,255,255,255, pref1[0], pref1[1]};
     auto transmitHandler = [](Span<uint8_t> span, size_t &read){
         rxContainer2.Fill(span, read);

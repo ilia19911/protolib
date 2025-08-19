@@ -1,10 +1,3 @@
-# [1.0.0-dev.3](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.2...v1.0.0-dev.3) (2025-08-19)
-
-
-### Bug Fixes
-
-* **container:** reset пакета не производился полностью, из за чего пакет мог ошибочно приниматься не того типа ([f3d5cfd](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/f3d5cfde37413d0a8c1a768e0d874ecb399277cc))
-
 # [1.5.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.4.0...v1.5.0) (2025-08-16)
 
 

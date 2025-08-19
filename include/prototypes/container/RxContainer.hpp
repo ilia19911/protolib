@@ -69,7 +69,7 @@ namespace proto
                                 }
                                 if constexpr (I != 0 ){
                                     read = 0;
-//                                    if(this->IsDebug())
+                                    if(this->IsDebug())
                                     {
                                         auto f = [this](auto index_c) -> MatchStatus {
                                             constexpr std::size_t J = decltype(index_c)::value;
@@ -309,8 +309,9 @@ namespace proto
             auto& data_field = container.template Get<FieldName::DATA_FIELD>();
 
             if constexpr (is_data_field_prototype<decltype(data_field)>::value) {
-                if(container.IsDebug()) {
-                    if (not data_field.SetId(type)) {
+
+                if (not data_field.SetId(type)) {
+                    if(container.IsDebug()) {
                         auto f = std::cout.flags();     // сохранить флаги
                         auto fill = std::cout.fill();   // и символ заполнения
                         auto to_u = [](auto v) -> uint64_t { return static_cast<uint64_t>(v); };
@@ -323,8 +324,9 @@ namespace proto
 
                         std::cout.flags(f);             // восстановить формат флагов
                         std::cout.fill(fill);           // восстановить fill-символ
-                        return MatchStatus::NOT_MATCH;
+
                     }
+                    return MatchStatus::NOT_MATCH;
                 }
             }
             size_t packet_size = data_field.GetSize();
