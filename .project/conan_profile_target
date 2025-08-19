@@ -1,0 +1,10 @@
+[settings]
+os=Linux
+arch=armv7
+compiler=gcc
+compiler.version=7
+compiler.libcxx=libstdc++11
+compiler.cppstd=gnu17
+
+[tool_requires]
+sdk/4.9.88-2.0.0

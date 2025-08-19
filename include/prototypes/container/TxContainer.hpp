@@ -118,14 +118,14 @@ namespace proto
                 }
                 this->offsets[field.base_] += field.size_;
             });
-            if(interface_){
-                this-> for_each_type([&](auto& field){
-                    interface_->Write({field.begin(), field.GetSize()});
-                });
-            }
             if(this->IsDebug()){
                 this-> for_each_type([&](auto& field){
                     field.Print();
+                });
+            }
+            if(interface_){
+                this-> for_each_type([&](auto& field){
+                    interface_->Write({field.begin(), field.GetSize()});
                 });
             }
         }

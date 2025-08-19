@@ -33,21 +33,22 @@ class ProtoLibConan(ConanFile):
 
     def generate(self):
         tc = CMakeToolchain(self)
-        tc.variables["BUILD_TESTING"] = "OFF"
-        tc.variables["PROTOLIB_BUILD_TESTS"] = "OFF"
-        tc.variables["INSTALL_GTEST"] = "OFF"
-        tc.variables["BUILD_GTEST"] = "OFF"
-        tc.variables["BUILD_GMOCK"] = "OFF"
-        tc.variables["PROTOLIB_VERSION"] = str(self.version or "")
+        # tc.variables["BUILD_TESTING"] = "OFF"
+        # tc.variables["INSTALL_GTEST"] = "OFF"
+        # tc.variables["BUILD_GTEST"] = "OFF"
+        # tc.variables["BUILD_GMOCK"] = "OFF"
+        # tc.variables["BUILD_PACKAGE"] = "ON"
+        # tc.variables["SOFTWARE_VERSION"] = str(self.version or "")
         tc.generate()
-        self.output.info(f"[protolib] generate(): PROTOLIB_VERSION={self.version}")
+        self.output.info(f"[protolib] generate(): SOFTWARE_VERSION={self.version}")
 
     def build(self):
         cmake = CMake(self)
         cmake.configure(variables={
             "BUILD_TESTING": "OFF",
             "BUILD_CONAN": "OFF",
-            "PROTOLIB_VERSION": str(self.version or ""),
+            "BUILD_PACKAGE": "ON",
+            "SOFTWARE_VERSION": str(self.version or ""),
         })
         cmake.build()
 
@@ -87,10 +88,10 @@ class ProtoLibConan(ConanFile):
         c["crc16_modbus"].set_property("cmake_target_name", "protolib::crc16_modbus")
         c["crc16_modbus"].libs = ["protolib_crc16_modbus"]
 
-        c["lacte"].set_property("cmake_target_name", "protolib::lacte")
-        c["lacte"].libs = ["protolib_lacte"]
-        c["lacte"].requires = ["interfaces", "crc_soft", "crc16_modbus", "fields"]
+        # c["lacte"].set_property("cmake_target_name", "protolib::lacte")
+        # c["lacte"].libs = ["protolib_lacte"]
+        # c["lacte"].requires = ["interfaces", "crc_soft", "crc16_modbus", "fields"]
 
         # зонтик — НО НЕ НАЗЫВАЙ его "protolib"
         c["all"].set_property("cmake_target_name", "protolib::all")
-        c["all"].requires = ["fields", "interfaces", "crc_soft", "crc16_modbus", "containers", "lacte"]
+        c["all"].requires = ["fields", "interfaces", "crc_soft", "crc16_modbus", "containers"]
