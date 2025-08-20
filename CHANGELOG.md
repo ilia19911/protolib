@@ -1,3 +1,24 @@
+# [1.0.0-dev.7](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.6...v1.0.0-dev.7) (2025-08-20)
+
+
+### Bug Fixes
+
+* **assert:** убрал assert так как на таргете не компилируется ([1af9409](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/1af9409b7528f146fdc856b2646da5f2f23914ae))
+
+# [1.0.0-dev.6](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.5...v1.0.0-dev.6) (2025-08-20)
+
+
+### Bug Fixes
+
+* **assert:** убрал assert так как под таргет не компилируется ([4bc425a](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/4bc425a1e6b394742f631ae5203be86df507ed25))
+
+# [1.0.0-dev.5](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.4...v1.0.0-dev.5) (2025-08-20)
+
+
+### Bug Fixes
+
+* **uart:** сделал uart raw ([dcb202b](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/dcb202b48a7ad0821da8a23af03e1254dc022fdb))
+
 # [1.5.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.4.0...v1.5.0) (2025-08-16)
 
 

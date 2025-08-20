@@ -70,7 +70,7 @@ namespace proto{
         template<int NAME, std::size_t I = 0>
         static constexpr int GetIndex() {
             if constexpr (I >= std::tuple_size_v<Packets>) {
-//                static_assert(false, "Type not found in Packets");
+                static_assert(false, "Type not found in Packets");
             } else {
                 using Current = std::tuple_element_t<I, Packets>;
                 if constexpr (NAME == Current::id) {
@@ -84,7 +84,7 @@ namespace proto{
         template<typename T, std::size_t I = 0>
         static constexpr int GetNumber() {
             if constexpr (I >= std::tuple_size_v<Packets>) {
-//                static_assert(false, "Type not found in Packets");
+                static_assert(false, "Type not found in Packets");
             } else {
                 using Current = std::tuple_element_t<I, Packets>;
                 if constexpr (std::is_same_v<T, typename Current::type>) {
