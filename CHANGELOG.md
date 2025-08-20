@@ -1,10 +1,3 @@
-# [1.0.0-dev.4](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.3...v1.0.0-dev.4) (2025-08-19)
-
-
-### Bug Fixes
-
-* **container:** починил тесты ([e6f8e74](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/e6f8e742801d3c3afc65244dc8902cc3e44c99dc))
-
 # [1.5.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.4.0...v1.5.0) (2025-08-16)
 
 
