@@ -88,50 +88,58 @@ namespace proto::interface{
             return -1;
         }
 
-        // Установка скорости (вход/выход)
+        // скорость
         speed_t speed;
         switch (baudrate) {
-            case 9600: speed = B9600; break;
-            case 19200: speed = B19200; break;
-            case 38400: speed = B38400; break;
-            case 57600: speed = B57600; break;
+            case 9600:   speed = B9600;   break;
+            case 19200:  speed = B19200;  break;
+            case 38400:  speed = B38400;  break;
+            case 57600:  speed = B57600;  break;
             case 115200: speed = B115200; break;
             default:
                 std::cerr << "Unsupported baud rate\n";
                 close(fd);
                 return -1;
         }
-
         cfsetospeed(&tty, speed);
         cfsetispeed(&tty, speed);
 
-        // Настройки: 8N1, отключить управление потоком
-        tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8 бит
-        tty.c_iflag &= ~IGNBRK;                         // отключить break
-        tty.c_lflag = 0;                                // без канонического режима
-        tty.c_oflag = 0;                                // без post-processing
+        // 8N1, без управления потоком
+        tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;  // 8 бит
+        tty.c_cflag |= (CLOCAL | CREAD);             // чтение, не становиться "владельцем" терминала
+        tty.c_cflag &= ~(PARENB | PARODD);           // без четности
+        tty.c_cflag &= ~CSTOPB;                      // 1 стоп-бит
+        tty.c_cflag &= ~CRTSCTS;                     // без аппаратного flow control
 
-        tty.c_cc[VMIN]  = 1;    // ожидать хотя бы 1 байт
-        tty.c_cc[VTIME] = 1;    // таймаут в 0.1 сек
+        // --- добавлено: выключить все текстовые маппинги и постобработку (raw) ---
+        tty.c_iflag &= ~(ICRNL | INLCR | IGNCR);     // не маппить CR/LF
+        tty.c_iflag &= ~(IXON | IXOFF | IXANY);      // без XON/XOFF
+        tty.c_iflag &= ~(BRKINT | ISTRIP | INPCK);   // убрать лишние преобразования/проверки
 
-        tty.c_iflag &= ~(IXON | IXOFF | IXANY);         // отключить XON/XOFF
-        tty.c_cflag |= (CLOCAL | CREAD);                // включить чтение
-        tty.c_cflag &= ~(PARENB | PARODD);              // без чётности
-        tty.c_cflag &= ~CSTOPB;                         // 1 стоп-бит
-        tty.c_cflag &= ~CRTSCTS;                        // без аппаратного потока
+        tty.c_oflag &= ~OPOST;                       // без постобработки вывода
 
-        if (tcsetattr(fd, TCSANOW, &tty) != 0) {
+        // локальные флаги: без каноники/эхо/сигналов
+        tty.c_lflag = 0;                             // уже было, оставляем
+        tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG | IEXTEN);
+
+        // тайминги чтения (как у тебя)
+        tty.c_cc[VMIN]  = 1;
+        tty.c_cc[VTIME] = 1;
+
+        // на всякий случай очистим очереди и применим атрибуты «с флэшом»
+        tcflush(fd, TCIOFLUSH);
+        if (tcsetattr(fd, TCSAFLUSH, &tty) != 0) {
             std::cerr << "Error setting termios attrs: " << strerror(errno) << "\n";
             close(fd);
             return -1;
         }
+
         fd_ = fd;
-        receive_thread_ = std::thread( [this]() {
-            // Обработка
+        receive_thread_ = std::thread([this]() {
             UartReaderThread();
         });
 
-            return fd;
+        return fd;
     }
 
     int UartLinuxInterface::Read(uint8_t * buffer, size_t count) {
