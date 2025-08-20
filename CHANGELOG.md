@@ -1,3 +1,10 @@
+# [1.0.0-dev.6](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.5...v1.0.0-dev.6) (2025-08-20)
+
+
+### Bug Fixes
+
+* **assert:** убрал assert так как под таргет не компилируется ([4bc425a](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/4bc425a1e6b394742f631ae5203be86df507ed25))
+
 # [1.0.0-dev.5](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.4...v1.0.0-dev.5) (2025-08-20)
 
 
