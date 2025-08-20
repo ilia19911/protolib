@@ -1,3 +1,10 @@
+# [1.0.0-dev.5](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.4...v1.0.0-dev.5) (2025-08-20)
+
+
+### Bug Fixes
+
+* **uart:** сделал uart raw ([dcb202b](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/dcb202b48a7ad0821da8a23af03e1254dc022fdb))
+
 # [1.5.0](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.4.0...v1.5.0) (2025-08-16)
 
 
