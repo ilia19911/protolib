@@ -5,11 +5,12 @@
 #include <utility>
 #include <functional>
 #include <chrono>
+#include <memory>
 
 #include "Span.hpp"
 
 namespace proto::interface{
-    using receiveDelegate = std::function<void(Span<uint8_t> buffer, size_t &read)>;
+    using Delegate = std::function<void(Span<uint8_t> buffer, size_t &read)>;
     using namespace std::chrono_literals;
 
     class IInterface {
@@ -20,7 +21,7 @@ namespace proto::interface{
         virtual bool IsOpen() = 0;
         virtual bool Open() = 0;
         virtual bool Close() = 0;
-        virtual bool AddReceiveCallback( receiveDelegate) = 0;
+        virtual bool AddReceiveCallback( std::shared_ptr<Delegate>) = 0;
 //        std::function<void()> on_ready_;
 
     private:

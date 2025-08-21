@@ -38,13 +38,14 @@ TEST(RxContainerTest, CheckReset){
 TEST(RxContainerTest, CheckOffsetsSameBuffer){
 
     received = false;
-    TestRxContainer<proto::test::proto_fields>::delegate receive_handler = [](auto& container) {
+    TestRxContainer<proto::test::proto_fields>::Delegate receive_handler = [](auto& container) {
         received = true;
         EXPECT_EQ(memcmp( (uint8_t*)container.template Get<proto::FieldName::DATA_FIELD>().GetData(), (uint8_t*)&testType, sizeof(testType)), 0);
         size_t packetSize =  GetTestPack(RxBufferTest, testType);
         EXPECT_EQ(memcmp((uint8_t*)container.template Get<proto::FieldName::ID_FIELD>().GetData(),RxBufferTest, packetSize), 0);
     };
-    rxContainer.SetReceiveHandler(receive_handler);
+    auto receive_handler_ptr = std::make_shared<TestRxContainer<proto::test::proto_fields>::Delegate>(receive_handler);
+    rxContainer.SetReceiveHandler(receive_handler_ptr);
     size_t offset = 0;
     rxContainer.Reset();
 
@@ -98,10 +99,12 @@ TEST(RxContainerTest, CheckOffsetsSameBuffer){
 
 TEST(RxContainerTest, CheckDebugOut){
     received = false;
-    TestRxContainer<proto::test::proto_fields>::delegate receive_handler = [](auto& container) {
+    TestRxContainer<proto::test::proto_fields>::Delegate receive_handler = [](auto& container) {
         received = true;
     };
-    rxContainer.SetReceiveHandler(receive_handler);
+    auto receive_handler_ptr = std::make_shared<TestRxContainer<proto::test::proto_fields>::Delegate>(receive_handler);
+
+    rxContainer.SetReceiveHandler(receive_handler_ptr);
     rxContainer.Reset();
     rxContainer.SetDebug(true);
 
@@ -139,10 +142,13 @@ TEST(RxContainerTest, CheckDebugOut){
 
 TEST(RxContainerTest, CheckDebugOutComplex){
     received = false;
-    TestRxContainer<proto::test::proto_fields2>::delegate receive_handler = [](auto& container) {
+    TestRxContainer<proto::test::proto_fields2>::Delegate receive_handler = [](auto& container) {
         received = true;
     };
-    rxContainer2.SetReceiveHandler(receive_handler);
+
+    auto receive_handler_ptr = std::make_shared<TestRxContainer<proto::test::proto_fields2>::Delegate>(receive_handler);
+
+    rxContainer2.SetReceiveHandler(receive_handler_ptr);
     rxContainer2.Reset();
     rxContainer2.SetDebug(true);
 

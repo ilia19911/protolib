@@ -23,18 +23,19 @@ namespace proto::interface {
 
         bool Close() override;
 
-        bool AddReceiveCallback(receiveDelegate callback) override ;
+        bool AddReceiveCallback(std::shared_ptr<Delegate>) override ;
 
     private:
         int fd_;
         std::mutex write_mtx;
         std::mutex read_mtx;
         bool is_open_;
-        std::vector<receiveDelegate> callbacks_;
+        std::vector<std::weak_ptr<Delegate>> callbacks_;
         uint8_t receive_buffer_[1000];
 
         std::thread receive_thread_;
-        void UartReaderThread();
+
+        int UartReaderThread();
         int Read(uint8_t*, size_t) override;
     };
 }
