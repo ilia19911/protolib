@@ -1,3 +1,10 @@
+# [1.0.0-dev.9](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.8...v1.0.0-dev.9) (2025-08-21)
+
+
+### Features
+
+* **weak_ptr:** добавил weak_ptr вместо указателя на callback ([f105a23](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/f105a2359b730efbd3b5b45a883b45402d3bbd26))
+
 # [1.0.0-dev.8](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.7...v1.0.0-dev.8) (2025-08-20)
 
 
