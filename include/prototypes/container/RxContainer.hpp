@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <cstring>
+#include <memory>
 
 #include "Span.hpp"
 #include <functional>
@@ -15,7 +16,7 @@ namespace proto
     class RxContainer : public FieldContainer<Fields, TCrc>
     {
     public:
-        using delegate = std::function<void(RxContainer<Fields, TCrc>&)>;
+        using Delegate = std::function<void(RxContainer<Fields, TCrc>&)>;
         RxContainer(){
 
             if((*this).template HasField<FieldName::LEN_FIELD>()){
@@ -113,8 +114,13 @@ namespace proto
                                 this->field_index_++;
                                 if(this->field_index_ >= this->size)
                                 {
-                                    if(receive_handler_){
-                                        receive_handler_(*this);
+                                    for (int i = static_cast<int>(receive_callbacks_.size()) - 1; i >= 0; --i) {
+                                        auto callback = receive_callbacks_[i].lock(); // shared_ptr или nullptr
+                                        if (!callback) {
+                                            receive_callbacks_.erase(receive_callbacks_.begin() + i);
+                                        } else {
+                                            (*callback)(*this); // если callback — функция/функтор
+                                        }
                                     }
                                     this->Reset();
                                 }
@@ -373,10 +379,10 @@ namespace proto
         [[nodiscard]] size_t GetSize() const {
             return this->template Get<FieldName::DATA_FIELD>().GetSize();
         }
-        void SetReceiveHandler(delegate handler) {
-            receive_handler_ = handler;
+        void SetReceiveHandler( std::weak_ptr<Delegate> handler) {
+            receive_callbacks_.push_back(handler);
         }
     private:
-        delegate receive_handler_;
+        std::vector<std::weak_ptr<Delegate>> receive_callbacks_;
     };
 }

@@ -9,9 +9,12 @@ namespace proto::interface{
         }
         std::lock_guard<std::mutex> lock(write_mtx);
         size_t read = 0;
-        if (not callbacks_.empty()) {
-            for (auto &callback: callbacks_) {
-                callback(buffer.subspan(read), read);
+        for(int i = static_cast<int>(callbacks_.size() - 1); i >= 0; i--) {
+            auto callback = callbacks_[i].lock(); // shared_ptr или nullptr
+            if (!callback) {
+                callbacks_.erase(callbacks_.begin() + i);
+            } else {
+                (*callback)(buffer.subspan(read), read);
             }
         }
         return true;
@@ -32,7 +35,7 @@ namespace proto::interface{
         return true;
     }
 
-    bool echoInterface::AddReceiveCallback(receiveDelegate callback) {
+    bool echoInterface::AddReceiveCallback(std::shared_ptr<Delegate> callback) {
         callbacks_.push_back(callback);
         return true;
     }
