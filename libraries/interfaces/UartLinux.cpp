@@ -39,7 +39,7 @@ namespace proto::interface{
         return static_cast<int>(total);
     }
 
-    void UartLinuxInterface::UartReaderThread() {
+    int UartLinuxInterface::UartReaderThread() {
 
         while (true) {
             ssize_t n = Read(receive_buffer_, sizeof(receive_buffer_));// read(fd_, receive_buffer_, sizeof(receive_buffer_));
@@ -47,12 +47,16 @@ namespace proto::interface{
                 break;
             }
             size_t read{};
-            if (not callbacks_.empty()) {
-                for (auto &callback: callbacks_) {
-                    callback({receive_buffer_, (size_t)n}, read);
+            for(int i = static_cast<int>( callbacks_.size()-1); i >=0; i--) {
+                auto callback = callbacks_[i].lock(); // shared_ptr или nullptr
+                if (!callback) {
+                    callbacks_.erase(callbacks_.begin() + i);
+                } else {
+                    (*callback)({receive_buffer_, (size_t)n}, read);
                 }
             }
         }
+        return 0;
     }
 
     bool UartLinuxInterface::IsOpen() {
@@ -69,7 +73,7 @@ namespace proto::interface{
         return true;
     }
 
-    bool UartLinuxInterface::AddReceiveCallback(receiveDelegate callback) {
+    bool UartLinuxInterface::AddReceiveCallback(std::shared_ptr<Delegate> callback) {
         callbacks_.push_back(callback);
         return true;
     }

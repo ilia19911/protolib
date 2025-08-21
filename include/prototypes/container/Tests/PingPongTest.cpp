@@ -18,12 +18,14 @@ TEST(PingPongContainerTest, SanyCaseType1){
         auto &data = fields.Get<proto::FieldName::DATA_FIELD>();
         EXPECT_EQ(testType, *data.GetData());
     };
+    auto transmitHandlerPtr = std::make_shared<proto::interface::Delegate>(transmitHandler);
+    auto receiveHandlerPtr = std::make_shared<proto::RxContainer<proto_fields>::Delegate>(receiveHandler);
     proto::interface::echoInterface interface{};
     interface.Open();
-    interface.AddReceiveCallback(transmitHandler);
+    interface.AddReceiveCallback(transmitHandlerPtr);
     txContainer.SetInterface(interface);
 
-    rxContainer.SetReceiveHandler(receiveHandler);
+    rxContainer.SetReceiveHandler(receiveHandlerPtr);
     received = false;
     txContainer.SendPacket(
             proto::MakeFieldInfo< proto::FieldName::DATA_FIELD>(&testType)
@@ -51,11 +53,13 @@ TEST(PingPongContainerTest, NoiseType1){
         auto &data = fields.Get<proto::FieldName::DATA_FIELD>();
         EXPECT_EQ(testType, *data.GetData());
     };
+    auto transmitHandlerPtr = std::make_shared<proto::interface::Delegate>(transmitHandler);
+    auto receiveHandlerPtr = std::make_shared<proto::RxContainer<proto_fields>::Delegate>(receiveHandler);
     proto::interface::echoInterface interface{};
     interface.Open();
-    interface.AddReceiveCallback(transmitHandler);
+    interface.AddReceiveCallback(transmitHandlerPtr);
     txContainer.SetInterface(interface);
-    rxContainer.SetReceiveHandler(receiveHandler);
+    rxContainer.SetReceiveHandler(receiveHandlerPtr);
 
     auto task = [&](auto &noiseData){
         interface.Write(Span<uint8_t>{noiseData, sizeof(noiseData)}, 1s);
@@ -85,13 +89,15 @@ TEST(PingPongContainerTest, SanyCaseType2){
         auto *data = data_field.GetIf<dataType2>();
         EXPECT_EQ(testType2, *data);
     };
+    auto transmitHandlerPtr = std::make_shared<proto::interface::Delegate>(transmitHandler);
+    auto receiveHandlerPtr = std::make_shared<proto::RxContainer<proto_fields2>::Delegate>(receiveHandler);
     proto::interface::echoInterface interface{};
     interface.Open();
-    interface.AddReceiveCallback(transmitHandler);
+    interface.AddReceiveCallback(transmitHandlerPtr);
     txContainer2.SetInterface(interface);
     //rxContainer2.SetDebug(true);
 
-    rxContainer2.SetReceiveHandler(receiveHandler);
+    rxContainer2.SetReceiveHandler(receiveHandlerPtr);
     received = false;
     txContainer2.SendPacket(
             proto::MakeFieldInfo< proto::FieldName::DATA_FIELD>(&testType2)
@@ -121,11 +127,13 @@ TEST(PingPongContainerTest, NoiseType2){
         auto *data = data_field.GetIf<dataType2>();
         EXPECT_EQ(testType2, *data);
     };
+    auto transmitHandlerPtr = std::make_shared<proto::interface::Delegate>(transmitHandler);
+    auto receiveHandlerPtr = std::make_shared<proto::RxContainer<proto_fields2>::Delegate>(receiveHandler);
     proto::interface::echoInterface interface{};
     interface.Open();
-    interface.AddReceiveCallback(transmitHandler);
+    interface.AddReceiveCallback(transmitHandlerPtr);
     txContainer2.SetInterface(interface);
-    rxContainer2.SetReceiveHandler(receiveHandler);
+    rxContainer2.SetReceiveHandler(receiveHandlerPtr);
 
     auto task = [&](auto &noiseData){
         interface.Write({noiseData, sizeof(noiseData)}, 1s);
