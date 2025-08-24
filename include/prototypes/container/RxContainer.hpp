@@ -1,3 +1,23 @@
+/**
+ * @file RxContainer.hpp
+ * @brief Stateful frame parsing container that incrementally matches and fills protocol fields from a byte stream.
+ *
+ * This header defines ::proto::RxContainer — a typed, compile-time configured receive (RX) container
+ * that consumes a stream of bytes (possibly chunked) and assembles protocol frames in-place
+ * using a set of field prototypes (see FieldContainer and field prototypes). The container:
+ *   - Tracks per-field offsets and incremental read progress.
+ *   - Applies per-field matchers (length/anti-length/CRC/type) as soon as a field completes.
+ *   - Emits user callbacks when a whole frame is received and validated.
+ *   - Supports debug output that prints detailed mismatch diagnostics and a snapshot of the partially
+ *     received fields when a frame breaks.
+ *
+ * @note The container is deliberately non-owning regarding I/O. Feed it with bytes via Fill().
+ *       Use AddReceiveCallback() to subscribe to fully parsed frames. Callbacks are weakly held
+ *       to avoid reference cycles and to allow automatic cleanup when user code drops its shared_ptr.
+ *
+ * @tparam Fields  A std::tuple of field prototypes describing the frame layout in RX direction.
+ * @tparam TCrc    CRC policy type. Must provide Reset() and Append(uint32_t, Span<uint8_t>) -> uint32_t.
+ */
 #pragma once
 
 #include "FieldContainer.hpp"
@@ -12,32 +32,87 @@
 
 namespace proto
 {
+    /**
+     * @class RxContainer
+     * @ingroup containers
+     * @brief Incremental parser for protocol frames based on field prototypes.
+     *
+     * RxContainer inherits FieldContainer and augments it with a small state machine that walks
+     * the field tuple in order and fills each field from the input stream. If a field completes,
+     * its matcher (if any) is invoked to validate/update container state. When all fields are matched,
+     * registered receive callbacks are invoked with a reference to the container.
+     *
+     * ### Lifecycle & usage
+     * 1. Construct an RxContainer. Default matchers for LEN/ALEN/CRC/TYPE are bound if present.
+     * 2. Optionally enable debug with `SetDebug(true)` on the base container.
+     * 3. Feed incoming data via `Fill(span, read)`. You may pass arbitrarily sized chunks.
+     * 4. Subscribe to completed frames via `AddReceiveCallback(callback)`.
+     *
+     * @warning This class is not thread-safe. If used across threads/ISRs, synchronize external calls
+     *          to Fill() and callbacks, or provide a single-threaded handoff buffer.
+     */
     template<typename Fields, typename TCrc = CrcSoft>
     class RxContainer : public FieldContainer<Fields, TCrc>
     {
     public:
-        using Delegate = std::function<void(RxContainer<Fields, TCrc>&)>;
+        /**
+         * @brief Type alias for the callback invoked when a full frame is received.
+         *
+         * The callback receives a reference to this container so the user can inspect field values.
+         * Prefer capturing only what you need to avoid prolonging lifetimes; callbacks are stored as weak_ptr.
+         */
+        using CallbackType = std::function<void(RxContainer<Fields, TCrc>&)>;
+        using Delegate = std::shared_ptr<CallbackType>;
+        /**
+         * @brief Helper to allocate a shared_ptr wrapper for a callback.
+         * @param callback User-provided callable to execute on completed frames.
+         * @return Shared pointer that can be retained by user code and passed to interfaces.
+         * @remarks Storing callbacks as weak_ptr prevents reference cycles and cleans up automatically
+         *          when the user drops the last shared_ptr.
+         */
+        static Delegate CreateDelegate(CallbackType callback) {
+            return std::make_shared<CallbackType>(callback);
+        }
+        /**
+         * @brief Constructs an RxContainer and auto-binds default matchers for standard fields.
+         *
+         * If present in @p Fields and the matcher is not already set, the following associations are applied:
+         *   - LEN_FIELD  -> SetDataLen()
+         *   - ALEN_FIELD -> CheckAlen()
+         *   - CRC_FIELD  -> CheckCrc()
+         *   - TYPE_FIELD -> CheckType()
+         * Finally, the container state is Reset().
+         */
         RxContainer(){
 
-            if((*this).template HasField<FieldName::LEN_FIELD>()){
+            if((*this).template HasField<FieldName::LEN_FIELD>() && (*this).template Get<FieldName::LEN_FIELD>().matcher_ == nullptr){
                 (*this).template Get<FieldName::LEN_FIELD>().matcher_ = &RxContainer::SetDataLen;
             }
 
-            if((*this).template HasField<FieldName::ALEN_FIELD>()){
+            if((*this).template HasField<FieldName::ALEN_FIELD>() && (*this).template Get<FieldName::ALEN_FIELD>().matcher_ == nullptr){
                 (*this).template Get<FieldName::ALEN_FIELD>().matcher_ = &RxContainer::CheckAlen;
             }
 
-            if((*this).template HasField<FieldName::CRC_FIELD>()){
+            if((*this).template HasField<FieldName::CRC_FIELD>() && (*this).template Get<FieldName::CRC_FIELD>().matcher_ == nullptr){
                 (*this).template Get<FieldName::CRC_FIELD>().matcher_ = &RxContainer::CheckCrc;
             }
 
-            if((*this).template HasField<FieldName::TYPE_FIELD>()){
+            if((*this).template HasField<FieldName::TYPE_FIELD>() && (*this).template Get<FieldName::TYPE_FIELD>().matcher_ == nullptr){
                 (*this).template Get<FieldName::TYPE_FIELD>().matcher_ = &RxContainer::CheckType;
             }
 
             this->Reset();
         }
 
+        /**
+         * @brief Compile-time unrolled dispatcher that calls a functor for a runtime field index.
+         * @tparam I    Current compile-time index (do not pass explicitly).
+         * @tparam Func Callable of the form `MatchStatus operator()(std::integral_constant<size_t, I>, Args...)`.
+         * @param runtime_index Index in [0, FieldContainer::size).
+         * @param f Functor to invoke for the matching index.
+         * @param args Additional arguments forwarded to @p f.
+         * @return MatchStatus returned by the invoked functor, or NOT_MATCH if index is out of range.
+         */
         template<typename Func, std::size_t I = 0, typename... Args>
         static MatchStatus static_for_index(std::size_t runtime_index, Func&& f, Args&&... args) {
             if constexpr (I < FieldContainer<Fields, TCrc>::size) {
@@ -50,6 +125,16 @@ namespace proto
             return MatchStatus::NOT_MATCH;
         }
 
+        /**
+         * @brief Feeds a chunk of bytes to the parser and advances internal state.
+         * @param src  Input chunk.
+         * @param[out] read Number of bytes consumed from @p src in the last field step.
+         *
+         * The method may iterate over multiple fields in a single call. If the current field mismatches,
+         * the container optionally prints a diagnostic snapshot (when debug is enabled) and resets state
+         * to start searching for the next valid frame boundary. On full frame completion, all valid
+         * callbacks are invoked (old expired ones are removed).
+         */
         void Fill(const Span<uint8_t> &src, size_t &read){
             Span<uint8_t> ptr = src;
             MatchStatus result = MatchStatus::NOT_MATCH;
@@ -134,6 +219,18 @@ namespace proto
 //            return result;
         }
 
+        /**
+         * @brief Reads bytes for a specific field, validates const values and copies into the frame buffer.
+         * @tparam Index Index of the field within the tuple.
+         * @param ptr  [in,out] Remaining input span; consumed bytes are accounted via @p read.
+         * @param read [out]    Number of bytes consumed for this field step.
+         * @return PROCESSING if the field is incomplete; MATCH if fully read (and matcher passed or absent);
+         *         NOT_MATCH on mismatch (const value check or matcher failure).
+         *
+         * @details
+         *  - Honors FieldFlags::REVERSE for endianness when reading constants and storing bytes.
+         *  - Invokes `matcher_` of the field when it completes, enabling length/type/CRC checks to run early.
+         */
         template<size_t Index>
         MatchStatus FillFields( Span<uint8_t>& ptr, size_t& read) {
             auto & field = std::get<Index>(this->fields_);
@@ -185,9 +282,9 @@ namespace proto
             field.read_count_ += byte_to_read;
 
             if(field.read_count_ < field.size_){
-                if constexpr (HasFlag(FieldTraits<decltype(field)>::flags, FieldFlags::SUPPRESS)){
-                    return MatchStatus::SUPPRESS;
-                }
+//                if constexpr (HasFlag(FieldTraits<decltype(field)>::flags, FieldFlags::SUPPRESS)){
+//                    return MatchStatus::SUPPRESS;
+//                }
                 return MatchStatus::PROCESSING;
             }
             else if(field.matcher_){
@@ -199,6 +296,14 @@ namespace proto
             }
         }
 
+        /**
+         * @brief Adjusts DATA_FIELD size based on LEN_FIELD and sizes of fields marked IS_IN_LEN.
+         * @param obj Opaque pointer to this container (provided by FillFields).
+         * @return MATCH on successful adjustment/validation, NOT_MATCH if declared size disagrees.
+         *
+         * @note This matcher allows DATA_FIELD to be `kAnySize` (dynamic). When DATA_FIELD has a fixed size,
+         *       the method validates that LEN_FIELD matches the expected size.
+         */
         static MatchStatus SetDataLen(void* obj){
             auto& container = *static_cast<RxContainer<Fields>*>(obj);
             auto &data_field = container.template Get<FieldName::DATA_FIELD>();
@@ -241,6 +346,11 @@ namespace proto
             return MatchStatus::MATCH;
         }
 
+        /**
+         * @brief Validates anti-length (ALEN) against LEN (bitwise NOT).
+         * @param obj Opaque pointer to this container.
+         * @return MATCH if `~ALEN == LEN`, otherwise NOT_MATCH.
+         */
         static MatchStatus CheckAlen(void *obj){
             auto& container = *static_cast<RxContainer<Fields>*>(obj);
             auto len = *container.template Get<FieldName::LEN_FIELD>().GetData();
@@ -267,6 +377,17 @@ namespace proto
             return result ? MatchStatus::MATCH : MatchStatus::NOT_MATCH;
         }
 
+        /**
+         * @brief Computes CRC over fields flagged IS_IN_CRC and compares it with CRC_FIELD.
+         * @param obj Opaque pointer to this container.
+         * @return MATCH if the computed CRC equals the value in CRC_FIELD; NOT_MATCH otherwise.
+         *
+         * @requirements TCrc must expose:
+         *   - void Reset();
+         *   - uint32_t Append(uint32_t, Span<uint8_t>);
+         *
+         * @remarks The CRC width is inferred from the CRC_FIELD storage type when pretty-printing debug values.
+         */
         static MatchStatus CheckCrc(void *obj){
             auto& container = *static_cast<RxContainer<Fields, TCrc>*>(obj);
             auto crc_in_field = *container.template Get<FieldName::CRC_FIELD>().GetData();
@@ -308,6 +429,15 @@ namespace proto
             return result? MatchStatus::MATCH : MatchStatus::NOT_MATCH;
         }
 
+        /**
+         * @brief Updates DATA_FIELD alternative by received TYPE_FIELD and validates its expected size.
+         * @param obj Opaque pointer to this container.
+         * @return MATCH if type is known and sizes match (or are dynamic), NOT_MATCH otherwise.
+         *
+         * @details For data-field variants, SetId(type) selects the concrete alternative.
+         *          When DATA_FIELD exposes a fixed size for the selected alternative, a mismatch
+         *          is treated as a protocol error and the frame is rejected.
+         */
         static MatchStatus CheckType(void *obj){
             auto& container = *static_cast<RxContainer<Fields>*>(obj);
 
@@ -376,13 +506,45 @@ namespace proto
             return MatchStatus::NOT_MATCH;
         }
 
+        /**
+         * @brief Returns the current DATA_FIELD size (may be dynamic).
+         */
         [[nodiscard]] size_t GetSize() const {
             return this->template Get<FieldName::DATA_FIELD>().GetSize();
         }
-        void SetReceiveHandler( std::weak_ptr<Delegate> handler) {
-            receive_callbacks_.push_back(handler);
+        /**
+         * @brief Subscribes to notifications when a full frame is parsed.
+         * @param callback Callable of signature `void(RxContainer&)`.
+         * @return A shared_ptr token to keep the subscription alive. Drop it to auto-unsubscribe.
+         * @thread_safety Callbacks execute synchronously from Fill(). Avoid long-running work inside.
+         */
+        [[nodiscard]] Delegate AddReceiveCallback( CallbackType callback) {
+            auto result = std::make_shared<CallbackType>(callback);
+            receive_callbacks_.push_back(result);
+            return result;
         }
     private:
-        std::vector<std::weak_ptr<Delegate>> receive_callbacks_;
+        /**
+         * @brief Weak list of subscribers. Expired entries are cleaned up on each frame completion.
+         */
+        std::vector<std::weak_ptr<CallbackType>> receive_callbacks_;
     };
 }
+
+/**
+ * @section RxContainer_Improvements Potential improvements
+ * @par Backpressure / flow control
+ *   Consider returning a struct from Fill() that reports total bytes consumed and whether a frame
+ *   callback was fired, which can help upstream code pace input.
+ * @par Error policy hooks
+ *   Provide a user hook to observe NOT_MATCH reasons with an enum, instead of relying solely on stdout.
+ * @par Partial-frame timeouts
+ *   Optionally track timestamps and reset if a field remains incomplete for too long.
+ * @par Debug printer abstraction
+ *   Replace direct std::cout usage with an injected logger to allow unit tests to intercept logs
+ *   and to cut I/O in production builds without ifdefs.
+ * @par Iterator-friendly Fill
+ *   Overload Fill(begin,end) to consume from arbitrary containers without building a Span first.
+ * @par Small-buffer optimization
+ *   For tiny frames, consider an internal scratch buffer to reduce memcpy for constant prefix checks.
+ */

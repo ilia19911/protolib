@@ -1,1 +1,1 @@
-#add_subdirectory(./lacte)
+add_subdirectory(./lacte)

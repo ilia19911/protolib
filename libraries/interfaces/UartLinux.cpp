@@ -11,8 +11,8 @@
 
 namespace proto::interface{
 
-    bool UartLinuxInterface::Write(Span<uint8_t> data, std::chrono::milliseconds timeout = 1s) {
-        if (fd_ < 0) return 0;
+    bool UartLinuxInterface::Write(Span<uint8_t> data, std::chrono::milliseconds timeout) {
+        if (fd_ < 0) return false;
         std::lock_guard<std::mutex> lock(write_mtx);
         Span<uint8_t> ptr = data;
         size_t total = 0;
@@ -73,10 +73,10 @@ namespace proto::interface{
         return true;
     }
 
-    bool UartLinuxInterface::AddReceiveCallback(std::shared_ptr<Delegate> callback) {
-        callbacks_.push_back(callback);
-        return true;
-    }
+//    bool UartLinuxInterface::AddReceiveCallback(Delegate callback) {
+//        callbacks_.push_back(callback);
+//        return true;
+//    }
 
     int UartLinuxInterface::OpenUart(const char* device, int baudrate) {
         int fd = open(device, O_RDWR | O_NOCTTY | O_SYNC);
