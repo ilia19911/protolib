@@ -1,3 +1,11 @@
+# [1.0.0-dev.10](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.9...v1.0.0-dev.10) (2025-08-24)
+
+
+### Features
+
+* **refact:** незначительно переработал библиотеку, добавил документацию, улучшил читаемость ([eb823d6](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/eb823d6b3e238cd10ca7f22986432d6d4ca5499b))
+* **weak_ptr:** переделал указатель на callback на weak_ptr ([7a4e227](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/7a4e227f5cd568c127c7dcf1ac7b79b5d64b64fa))
+
 # [1.0.0-dev.9](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.8...v1.0.0-dev.9) (2025-08-21)
 
 
