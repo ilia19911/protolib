@@ -11,7 +11,7 @@ public:
     Span() : ptr_(nullptr), size_(0) {}
     Span(const T* ptr, size_t size) : ptr_(const_cast<T*>(ptr)), size_(size) {}
 
-    T* data() const { return ptr_; }
+    [[nodiscard]] T* data() const { return ptr_; }
     [[nodiscard]] size_t size() const { return size_; }
     [[nodiscard]] bool empty() const { return size_ == 0; }
 
@@ -20,10 +20,10 @@ public:
         return ptr_[index];
     }
 
-    T* begin() const { return ptr_; }
-    T* end() const { return ptr_ + size_; }
+    [[nodiscard]] T* begin() const { return ptr_; }
+    [[nodiscard]] T* end() const { return ptr_ + size_; }
 
-    Span<T> subspan(size_t offset, size_t count = static_cast<size_t>(-1)) const {
+    [[nodiscard]] Span<T> subspan(size_t offset, size_t count = static_cast<size_t>(-1)) const {
         assert(offset <= size_);
         size_t new_size = count == static_cast<size_t>(-1) ? size_ - offset : count;
         assert(offset + new_size <= size_);

@@ -1,7 +1,8 @@
 # CMakeLists.txt этого модуля (Field)
 include(GNUInstallDirs)
 
-add_library(protolib_fields INTERFACE)
+add_library(protolib_fields INTERFACE
+        FieldFlags.hpp)
 add_library(protolib::fields ALIAS protolib_fields)
 set_target_properties(protolib_fields PROPERTIES EXPORT_NAME fields)
 

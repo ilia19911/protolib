@@ -23,15 +23,15 @@ namespace proto::interface {
 
         bool Close() override;
 
-        bool AddReceiveCallback(std::shared_ptr<Delegate>) override ;
+//        bool AddReceiveCallback(Delegate) override ;
 
     private:
-        int fd_;
+        int fd_{-1};
         std::mutex write_mtx;
         std::mutex read_mtx;
-        bool is_open_;
-        std::vector<std::weak_ptr<Delegate>> callbacks_;
-        uint8_t receive_buffer_[1000];
+        bool is_open_{false};
+
+        uint8_t receive_buffer_[1000]{};
 
         std::thread receive_thread_;
 

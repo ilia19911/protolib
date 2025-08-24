@@ -2,7 +2,6 @@
 #include <chrono>
 #include <atomic>
 #include <mutex>
-#include <condition_variable>
 #include <cstring>
 #include <iostream>
 #include <fstream>
@@ -11,7 +10,7 @@
 
 
 
-uint16_t Ymodem::crc16(const uint8_t* data, size_t len) {
+uint16_t YmodemPrerelease::crc16(const uint8_t* data, size_t len) {
     uint16_t crc = 0x0000;
     for (size_t i = 0; i < len; ++i) {
         crc ^= static_cast<uint16_t>(data[i]) << 8;
@@ -21,7 +20,7 @@ uint16_t Ymodem::crc16(const uint8_t* data, size_t len) {
     return crc;
 }
 
-void Ymodem::send_block(uint8_t block_num, const uint8_t* data, size_t len) {
+void YmodemPrerelease::send_block(uint8_t block_num, const uint8_t* data, size_t len) {
 
     uint8_t buf[3 + BLOCK_SIZE + 2] = {};
     buf[0] = STX;
@@ -36,10 +35,10 @@ void Ymodem::send_block(uint8_t block_num, const uint8_t* data, size_t len) {
     buf[3 + BLOCK_SIZE] = (crc >> 8) & 0xFF;
     buf[4 + BLOCK_SIZE] = crc & 0xFF;
     received = false;
-    interface.Write({buf, sizeof(buf)});
+    interface_.Write({buf, sizeof(buf)});
 }
 
-void Ymodem::send_header_block(const std::string& filename, size_t filesize) {
+void YmodemPrerelease::send_header_block(const std::string& filename, size_t filesize) {
     uint8_t header[128] = {};
     std::snprintf(reinterpret_cast<char*>(header), 128, "%s%c%zu", filename.c_str(), 0, filesize);
 
@@ -54,10 +53,10 @@ void Ymodem::send_header_block(const std::string& filename, size_t filesize) {
     buf[131] = (crc >> 8) & 0xFF;
     buf[132] = crc & 0xFF;
     received = false;
-    interface.Write({buf, sizeof(buf)});
+    interface_.Write({buf, sizeof(buf)});
 }
 
-bool Ymodem::Wait(char c, size_t trys = 300) {
+bool YmodemPrerelease::Wait(char c, size_t trys = 300) {
     using namespace std::chrono_literals;
     const auto timeout = 10ms;
 
@@ -82,7 +81,7 @@ bool Ymodem::Wait(char c, size_t trys = 300) {
     return false; // превышено количество попыток
 }
 
-int Ymodem::send(const std::string& filename) {
+int YmodemPrerelease::send(const std::string& filename) {
 
     std::ifstream file(filename, std::ios::binary);
     if (!file) {
@@ -124,8 +123,8 @@ int Ymodem::send(const std::string& filename) {
         send_block( block_num++, buffer, count);
         if(!Wait(ACK)){
             std::cout << "Can't send file, send_block error" << std::endl;
-            interface.Write( {&ABORT1, 1});
-            interface.Write({&ABORT2, 1});
+            interface_.Write( {&ABORT1, 1});
+            interface_.Write({&ABORT2, 1});
         }
         auto percenage = (block_num* BLOCK_SIZE * 100)/filesize;
         if(percenage/5 > (last_percentage/5  )){
@@ -140,7 +139,7 @@ int Ymodem::send(const std::string& filename) {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     std::cout << "Finishing EOT...\n";
-    interface.Write({&EOT, 1});
+    interface_.Write({&EOT, 1});
     if(!Wait(ACK)){
         std::cout << "Bootloader doesn't answer for EOT" << std::endl;
         return -1;

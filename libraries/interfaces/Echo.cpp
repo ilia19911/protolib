@@ -35,10 +35,10 @@ namespace proto::interface{
         return true;
     }
 
-    bool echoInterface::AddReceiveCallback(std::shared_ptr<Delegate> callback) {
-        callbacks_.push_back(callback);
-        return true;
-    }
+//    bool echoInterface::AddReceiveCallback(Delegate callback) {
+//        callbacks_.push_back(callback);
+//        return true;
+//    }
 
     int echoInterface::Read(uint8_t *buffer, size_t count) {
         return 0;

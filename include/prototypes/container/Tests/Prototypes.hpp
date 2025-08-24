@@ -1,38 +1,52 @@
 #pragma once
 
-#include "Field.hpp"
+#include "FieldPrototype.hpp"
 #include "FieldContainer.hpp"
 #include "RxContainer.hpp"
 #include "TxContainer.hpp"
-#include "FieldPrototypes.hpp"
+#include "TestFieldPrototypes.hpp"
+#include "TestFields.hpp"
+
+namespace proto::test{
 
 
-template<typename Fields>
-class TestRxContainer : public proto::RxContainer<Fields> {
-public:
-//    void SetOffset
-    void Reset() {
-        proto::FieldContainer<Fields>::Reset();
-    }
-};
+    template<uint8_t *RX_BASE, uint8_t *TX_BASE>
+    class SympleProtocol{
+    public:
+        // Public aliases to use in tests (and elsewhere)
+        using RxFields      = typename SympleFields<RX_BASE>::proto_fields;
+        using TxFields      = typename SympleFields<TX_BASE>::proto_fields;
+        using RxContainerT  = proto::RxContainer<RxFields>;
+        using TxContainerT  = proto::TxContainer<TxFields>;
 
-template<typename Fields>
-class TestTxContainer : public proto::TxContainer<Fields> {
+        // Accessors (non-const/const) to reach the underlying containers in tests
+        RxContainerT& rx() { return rxContainer_; }
+        TxContainerT& tx() { return txContainer_; }
+        const RxContainerT& rx() const { return rxContainer_; }
+        const TxContainerT& tx() const { return txContainer_; }
 
-};
+    private:
+        proto::RxContainer<typename SympleFields<RX_BASE>::proto_fields> rxContainer_{};
+        proto::TxContainer<typename SympleFields<TX_BASE>::proto_fields> txContainer_{};
+    };
 
-extern TestRxContainer<proto::test::proto_fields> rxContainer;
-extern TestTxContainer<proto::test::proto_fields> txContainer;
-extern TestRxContainer<proto::test::proto_fields2> rxContainer2;
-extern TestTxContainer<proto::test::proto_fields2> txContainer2;
+    template<uint8_t *RX_BASE, uint8_t *TX_BASE>
+    class ComplexProtocol{
+    public:
+        // Public aliases to use in tests (and elsewhere)
+        using RxFields      = typename ComplexFields<RX_BASE>::proto_fields;
+        using TxFields      = typename ComplexFields<TX_BASE>::proto_fields;
+        using RxContainerT  = proto::RxContainer<RxFields>;
+        using TxContainerT  = proto::TxContainer<TxFields>;
 
+        // Accessors (non-const/const) to reach the underlying containers in tests
+        RxContainerT& rx() { return rxContainer_; }
+        TxContainerT& tx() { return txContainer_; }
+        const RxContainerT& rx() const { return rxContainer_; }
+        const TxContainerT& tx() const { return txContainer_; }
 
-
-extern uint8_t TxBufferTest[100];
-extern uint8_t RxBufferTest[100];
-extern proto::test::dataType testType;
-extern proto::test::dataType2 testType2;
-extern proto::test::dataType3 testType3;
-
-extern size_t GetTestPack(uint8_t* ptr, proto::test::dataType& obj);
-extern size_t GetTestPack2(uint8_t* ptr, proto::test::dataType2& obj);
+    private:
+        proto::RxContainer<typename ComplexFields<RX_BASE>::proto_fields> rxContainer_{};
+        proto::TxContainer<typename ComplexFields<TX_BASE>::proto_fields> txContainer_{};
+    };
+}
