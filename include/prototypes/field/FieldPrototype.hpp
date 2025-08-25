@@ -278,7 +278,7 @@ namespace proto {
          * Copies @ref CONST_VALUE into buffer.
          */
         void ApplyConst() {
-            if (CONST_VALUE != nullptr) {
+            if constexpr (CONST_VALUE != nullptr) {
                 if constexpr ((FLAGS & FieldFlags::REVERSE) != FieldFlags::NOTHING) {
                     for (int i = 0; i < GetSize(); i++) {
                         (BASE + offset_)[i] = CONST_VALUE[GetSize() - 1 - i];
