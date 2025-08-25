@@ -157,7 +157,7 @@ namespace proto {
          *
          * @return Variant holding current value.
          */
-        FieldType GetData() const {
+        FieldType GetCopy() const {
             return GetVariantImpl<0>();
         }
 

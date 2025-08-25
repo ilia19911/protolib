@@ -205,6 +205,12 @@ namespace Lacte::Proto {
         >;
     };
 
+template<uint8_t *BASE>
+class ParamProtocol : public proto::ProtocolEndpoint<
+    typename ParamPacket<BASE>::packet_fields,
+    typename ParamPacket<BASE>::packet_fields> {
+ public:
+};
 
     template<uint8_t* BASE>
     struct hostPacket{
@@ -250,7 +256,7 @@ namespace Lacte::Proto {
         proto::PacketInfo<RFID_DATA, RFIDDataPacketType>,
         proto::PacketInfo<SET_PARAMS, uint8_t*>,
         proto::PacketInfo<GET_PARAMS, uint8_t*>,
-        //       proto::PacketInfo<GET_PARAMS, typename ParamPacket<BASE>:: packet_fields>,
+//        proto::PacketInfo<GET_PARAMS, ParamProtocol<BASE>>
         proto::PacketInfo<RESTART, proto::EmptyDataType>
         >;
         using boardIdFieldType = proto::FieldPrototype<proto::FieldName::ID_FIELD, const uint8_t*, BASE, proto::FieldFlags::NOTHING, 2, 2, boardPacket::board_prefix>;

@@ -89,25 +89,25 @@ namespace Lacte::Proto {
             board_receive_delegate = board_proto.RxContainer.AddReceiveCallback([&](auto &container){
                 auto& field = container.template Get<proto::FieldName::TYPE_FIELD>();
                 auto& field_data = container.template Get<proto::FieldName::DATA_FIELD>();
-                if(*field.GetData() == packetNumbers::VERSION){
+                if(*field.GetPtr() == packetNumbers::VERSION){
                     board_proto.Answer(packetNumbers::VERSION, version_data);
                 }
-                else if(*field.GetData() == packetNumbers::INFO){
+                else if(*field.GetPtr() == packetNumbers::INFO){
                     board_proto.Answer(packetNumbers::INFO, info_data);
                 }
-                else if(*field.GetData() == packetNumbers::UID){
+                else if(*field.GetPtr() == packetNumbers::UID){
                     board_proto.Answer(packetNumbers::UID, uid_data);
                 }
-                else if(*field.GetData() == packetNumbers::RFID_ID){
+                else if(*field.GetPtr() == packetNumbers::RFID_ID){
                     board_proto.Answer(packetNumbers::RFID_ID, rfid);
                 }
-                else if(*field.GetData() == packetNumbers::RFID_DATA){
+                else if(*field.GetPtr() == packetNumbers::RFID_DATA){
                     board_proto.Answer(packetNumbers::RFID_DATA, rfid_data);
                 }
-                else if(*field.GetData() == packetNumbers::RESTART){
+                else if(*field.GetPtr() == packetNumbers::RESTART){
                     board_proto.Answer(packetNumbers::RESTART);
                 }
-                else if(*field.GetData() == packetNumbers::GET_PARAMS){
+                else if(*field.GetPtr() == packetNumbers::GET_PARAMS){
                     auto param = *field_data.GetPtr();
                     if(param == Params::numbers::MAGIC_WORD){
                         board_proto.Answer(packetNumbers::GET_PARAMS, magic_word, sizeof(magic_word));

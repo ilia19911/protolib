@@ -149,7 +149,7 @@ TEST_F(RxContainerSuite, Fill_OffsetsProgressOnSameBuffer) {
     auto recv = rx.AddReceiveCallback([&](RxT& c){
         ++callback_count;
         EXPECT_EQ(std::memcmp(
-                          (const uint8_t*)c.template Get<FieldName::DATA_FIELD>().GetData(),
+                          (const uint8_t*)c.template Get<FieldName::DATA_FIELD>().GetPtr(),
                                   (const uint8_t*)&kTestData1,
                                   sizeof(kTestData1)),
                   0);
@@ -265,12 +265,12 @@ TEST_F(RxContainerSuite, Debug_MismatchPathsCovered_ComplexLayout) {
     auto& tx2 = complex_.tx;
 
     using Rx2T = std::remove_reference_t<decltype(rx2)>;
-    auto last_variant_ = rx2.template Get<FieldName::DATA_FIELD>().GetData();
+    auto last_variant_ = rx2.template Get<FieldName::DATA_FIELD>().GetCopy();
     auto recv2 = rx2.AddReceiveCallback([&](Rx2T& c){
         received_ = true;
         // Save the variant from DATA field inside the callback because
         // the container state is reset after the handler returns.
-        last_variant_ = c.template Get<FieldName::DATA_FIELD>().GetData();
+        last_variant_ = c.template Get<FieldName::DATA_FIELD>().GetCopy();
     });
     rx2.SetDebug(true);
 

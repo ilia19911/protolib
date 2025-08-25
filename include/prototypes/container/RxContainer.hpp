@@ -308,7 +308,7 @@ namespace proto
             auto& container = *static_cast<RxContainer<Fields>*>(obj);
             auto &data_field = container.template Get<FieldName::DATA_FIELD>();
             auto &len_field = container.template Get<FieldName::LEN_FIELD>();
-            auto len = *len_field.GetData();
+            auto len = *len_field.GetPtr();
 
             container.for_each_type( [&](auto& field){
                 if (field.name_ != FieldName::DATA_FIELD) {
@@ -322,7 +322,7 @@ namespace proto
                 if (data_field.size_ != 0 && data_field.size_ != kAnySize) {
                     if (len != data_field.GetSize()) {
                         if(container.IsDebug()){
-                            auto expected = static_cast<unsigned>(*len_field.GetData())
+                            auto expected = static_cast<unsigned>(*len_field.GetPtr())
                                             + (data_field.GetSize() - static_cast<unsigned>(len));
 
                             std::ios_base::fmtflags f(std::cout.flags()); // сохранить формат
@@ -330,8 +330,8 @@ namespace proto
                             std::cout << "\nMismatch in length field (method SetDataLen):\n"
                                       << "  Expected: " << std::dec << static_cast<unsigned>(expected)
                                       << " (0x" << std::hex << std::uppercase << static_cast<unsigned>(expected) << ")\n"
-                                      << "  Received: " << std::dec << static_cast<unsigned>(*len_field.GetData())
-                                      << " (0x" << std::hex << std::uppercase << static_cast<unsigned>(*len_field.GetData()) << ")\n";
+                                      << "  Received: " << std::dec << static_cast<unsigned>(*len_field.GetPtr())
+                                      << " (0x" << std::hex << std::uppercase << static_cast<unsigned>(*len_field.GetPtr()) << ")\n";
 
                             std::cout.flags(f); // восстановить
                         }
@@ -353,8 +353,8 @@ namespace proto
          */
         static MatchStatus CheckAlen(void *obj){
             auto& container = *static_cast<RxContainer<Fields>*>(obj);
-            auto len = *container.template Get<FieldName::LEN_FIELD>().GetData();
-            auto alen = *container.template Get<FieldName::ALEN_FIELD>().GetData();
+            auto len = *container.template Get<FieldName::LEN_FIELD>().GetPtr();
+            auto alen = *container.template Get<FieldName::ALEN_FIELD>().GetPtr();
 
             alen = ~alen;
 
@@ -390,7 +390,7 @@ namespace proto
          */
         static MatchStatus CheckCrc(void *obj){
             auto& container = *static_cast<RxContainer<Fields, TCrc>*>(obj);
-            auto crc_in_field = *container.template Get<FieldName::CRC_FIELD>().GetData();
+            auto crc_in_field = *container.template Get<FieldName::CRC_FIELD>().GetPtr();
             using crc_type = decltype(crc_in_field);
             uint32_t crc = 0;
             container.crc_.Reset();
@@ -441,7 +441,7 @@ namespace proto
         static MatchStatus CheckType(void *obj){
             auto& container = *static_cast<RxContainer<Fields>*>(obj);
 
-            int type = *container.template Get<FieldName::TYPE_FIELD>().GetData();
+            int type = *container.template Get<FieldName::TYPE_FIELD>().GetPtr();
             auto& data_field = container.template Get<FieldName::DATA_FIELD>();
 
             if constexpr (is_data_field_prototype<decltype(data_field)>::value) {

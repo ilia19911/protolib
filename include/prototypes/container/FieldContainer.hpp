@@ -122,15 +122,16 @@ namespace proto
          *   field's `FieldType`.
          * - If the container has no DATA_FIELD, this resolves to `void`.
          */
-//        using ReturnType = typename FieldByName<FieldsTuple, FieldName::DATA_FIELD>::type::FieldType;
-            using DataField  = typename FieldByName<FieldsTuple, FieldName::DATA_FIELD>::type;
-            using ReturnType = decltype(std::declval<const DataField&>().GetData());
 
-//        /**
-//         * @brief Backward-compatible alias expected by some code paths.
-//         * @note Provided to satisfy existing usages (e.g., ProtocolEndpoint) that refer to `Variant`.
-//         */
-//        using Variant = ReturnType;
+
+        using DataField  = typename FieldByName<FieldsTuple, FieldName::DATA_FIELD>::type;
+        using ReturnType =
+          std::remove_const_t<
+              std::remove_reference_t<
+                  decltype(std::declval<const DataField&>().GetCopy())
+              >
+          >;
+
 
         /**
          * @brief Enable or disable debug mode for the container and its fields.

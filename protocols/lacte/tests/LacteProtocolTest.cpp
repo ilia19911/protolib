@@ -45,39 +45,14 @@ namespace Lacte::Proto::Tests{
         request(Lacte::Proto::RFID_DATA, board.rfid_data);
         request(Lacte::Proto::RESTART, proto::EmptyDataType{});
 
+//      auto request_param = [&](auto type, auto&& answer_type)->void{
+//        auto answer = host_proto.ReguestParam(MakeFieldInfo<FieldName::TYPE_FIELD>(&type));
+//        ASSERT_TRUE(std::holds_alternative<std::remove_reference_t<decltype(answer_type)>>(answer));
+//        EXPECT_EQ(std::get<std::remove_reference_t<decltype(answer_type)>>(answer), answer_type);
+//      };
 //
-//        // --- RequestByType для обычных команд ---
-//        {
-//            auto info_t = host_proto.RequestByType<InfoPacketType>();
-//            ASSERT_TRUE(info_t.has_value());
-//            EXPECT_EQ(*info_t, board.info_data);
-//        }
-//        {
-//            auto ver_t = host_proto.RequestByType<VersionPacketType>();
-//            ASSERT_TRUE(ver_t.has_value());
-//            EXPECT_EQ(*ver_t, board.version_data);
-//        }
-//        {
-//            auto uid_t = host_proto.RequestByType<UIDPacketType>();
-//            ASSERT_TRUE(uid_t.has_value());
-//            EXPECT_EQ(*uid_t, board.uid_data);
-//        }
-//        {
-//            auto rfid_t = host_proto.RequestByType<RFIDPacketType>();
-//            ASSERT_TRUE(rfid_t.has_value());
-//            EXPECT_EQ(*rfid_t, board.rfid);
-//        }
-//        {
-//            auto rfid_data_t = host_proto.RequestByType<RFIDDataPacketType>();
-//            ASSERT_TRUE(rfid_data_t.has_value());
-//            EXPECT_EQ(*rfid_data_t, board.rfid_data);
-//        }
-//        {
-//            // по типу ответа EmptyDataType → RESTART
-//            auto rst_t = host_proto.RequestByType<proto::EmptyDataType>();
-//            EXPECT_TRUE(rst_t.has_value());
-//        }
-//
+//      request_param(Lacte::Proto::Params::numbers::LACTE_SN, board.lacte_sn);
+
 //        // --- параметры (GET_PARAMS) ---
 //        {
 //            auto magic = host_proto.GetParam<Params::MAGIC_WORD>();

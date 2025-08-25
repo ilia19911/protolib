@@ -91,11 +91,11 @@ TEST_F(ContainerSuite, ForEachTypeOrderAndNames) {
 TEST_F(ContainerSuite, DataTypesOfGetData) {
     proto::FieldContainer<SimpleTuple> container;
 
-    auto  id_ptr   = container.Get<proto::FieldName::ID_FIELD  >().GetData();
-    auto  len_val  = *container.Get<proto::FieldName::LEN_FIELD >().GetData();
-    auto  alen_val = *container.Get<proto::FieldName::ALEN_FIELD>().GetData();
-    auto  data_ptr = container.Get<proto::FieldName::DATA_FIELD>().GetData();
-    auto  crc_val  = *container.Get<proto::FieldName::CRC_FIELD >().GetData();
+    auto  id_ptr   = container.Get<proto::FieldName::ID_FIELD  >().GetPtr();
+    auto  len_val  = *container.Get<proto::FieldName::LEN_FIELD >().GetPtr();
+    auto  alen_val = *container.Get<proto::FieldName::ALEN_FIELD>().GetPtr();
+    auto  data_ptr = container.Get<proto::FieldName::DATA_FIELD>().GetPtr();
+    auto  crc_val  = *container.Get<proto::FieldName::CRC_FIELD >().GetPtr();
 
     static_assert(std::is_same_v<decltype(id_ptr),   const uint8_t*>,               "ID_FIELD must be const uint8_t*");
     static_assert(std::is_same_v<decltype(len_val),  uint8_t>,                      "LEN_FIELD must be uint8_t");

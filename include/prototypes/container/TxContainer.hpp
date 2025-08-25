@@ -254,7 +254,7 @@ namespace proto
             auto& len_field = container.template Get<FieldName::LEN_FIELD>();
             if constexpr (TxContainer<Fields>::template HasField<FieldName::ALEN_FIELD>()){
                 auto& alen_field = container.template Get<FieldName::ALEN_FIELD>();
-                alen_field.Set(~(*len_field.GetData()));
+по                alen_field.Set(~(*len_field.GetPtr()));
             }
             return MatchStatus::MATCH;
         }

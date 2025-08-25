@@ -56,8 +56,8 @@ TEST(PingPongContainerTest, SanyCaseType1){
             }, result);
             EXPECT_TRUE(matched) << "Variant did not contain dataType";
         } else {
-            ASSERT_NE(result, nullptr);
-            EXPECT_EQ(expected, *result);
+//            ASSERT_NE(result, nullptr);
+            EXPECT_EQ(expected, result);
         }
     };
 
@@ -93,8 +93,8 @@ TEST(PingPongContainerTest, NoiseType1){
             }, result);
             EXPECT_TRUE(matched) << "Variant did not contain expected type";
         } else {
-            ASSERT_NE(result, nullptr);
-            EXPECT_EQ(expected, *result);
+//            ASSERT_NE(result, nullptr);
+            EXPECT_EQ(expected, result);
         }
     };
 
@@ -137,8 +137,8 @@ TEST(PingPongContainerTest, SanyCaseType2){
             }, result);
             EXPECT_TRUE(matched) << "Variant did not contain expected type";
         } else {
-            ASSERT_NE(result, nullptr);
-            EXPECT_EQ(expected, *result);
+//            ASSERT_NE(result, nullptr);
+            EXPECT_EQ(expected, result);
         }
     };
 
@@ -174,8 +174,8 @@ TEST(PingPongContainerTest, NoiseType2){
             }, result);
             EXPECT_TRUE(matched) << "Variant did not contain expected type";
         } else {
-            ASSERT_NE(result, nullptr);
-            EXPECT_EQ(expected, *result);
+//            ASSERT_NE(result, nullptr);
+            EXPECT_EQ(expected, result);
         }
     };
 

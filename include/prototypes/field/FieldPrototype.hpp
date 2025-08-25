@@ -140,12 +140,57 @@ namespace proto {
         /// @return Current size in bytes.
         [[nodiscard]] virtual size_t GetSize() const { return size_ < MAX_SIZE? size_:MAX_SIZE; }
 
-        /// @return Typed pointer to field data.
-        [[nodiscard]] constexpr const FieldType* GetData() const {
-            return reinterpret_cast<FieldType*>(BASE + offset_);
+
+      // ---- trait: это std::vector ? ----
+      template<class> struct is_std_vector : std::false_type {};
+      template<class U, class A>
+      struct is_std_vector<std::vector<U, A>> : std::true_type {};
+
+      template<class TT>
+      static constexpr bool is_std_vector_v = is_std_vector<TT>::value;
+
+// ---- ваш тип возвращаемого значения ----
+// если поле-указатель (T = X*), вернуть std::vector<X>, иначе — T
+      using CopyType = std::conditional_t<
+          std::is_pointer_v<T>,
+          std::vector<std::remove_pointer_t<T>>,
+          T
+      >;
+
+      using Elem = std::remove_pointer_t<T>;
+
+
+        [[nodiscard]] CopyType GetCopy() const {
+          if constexpr (is_std_vector_v<CopyType>) {
+            // T — указатель ⇒ возвращаем вектор элементов
+            const std::size_t bytes = GetSize();                  // сколько байт в поле
+            const std::size_t n     = bytes / sizeof(Elem);       // сколько элементов
+            CopyType v;                                            // это std::vector<Elem>
+            v.resize(n);
+            if (n) {
+              // предполагаем, что данные плоские и совместимы по представлению
+              std::memcpy(v.data(), GetPtr(), n * sizeof(Elem));
+            }
+            return v;
+          } else {
+            // T — не указатель ⇒ вернуть T по значению
+            CopyType value{};
+            if constexpr (std::is_trivially_copyable_v<CopyType>) {
+              // безопасно побайтно
+              std::memcpy(&value, GetPtr(), sizeof(CopyType));
+            } else {
+              // лучше явно сконструировать из байтов, если есть такой конструктор,
+              // или написать парсер; memcpy для нетривиальных типов — UB.
+              // Пример (если у вас есть подходящий конструктор):
+              // value = CopyType(reinterpret_cast<const std::byte*>(GetPtr()), GetSize());
+              static_assert(std::is_trivially_copyable_v<CopyType>,
+                            "Provide a parser/constructor for non-trivial CopyType");
+            }
+            return value;
+          }
         }
-        [[nodiscard]] constexpr const uint8_t* GetPtr() const {
-            return (BASE + offset_);
+        [[nodiscard]] constexpr const FieldType* GetPtr() const {
+            return reinterpret_cast<FieldType*>(BASE + offset_);
         }
 
 

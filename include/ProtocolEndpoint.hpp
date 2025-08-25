@@ -103,7 +103,7 @@ namespace proto{
             ReceiveType result{};
             auto l = [&](auto& container){
                 auto& data_field = rx.template Get<proto::FieldName::DATA_FIELD>();
-                result = data_field.GetData();
+                result = data_field.GetCopy();
             };
             inflight_cb_ = l;
             tx.SendPacket(std::forward<Infos>(infos)...);
