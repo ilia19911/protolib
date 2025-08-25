@@ -398,7 +398,7 @@ namespace proto
             container.for_each_type([&](auto& field){
                 using field_type = typename std::remove_reference<decltype(field)>::type;
                 if constexpr (HasFlag(field_type::flags_, FieldFlags::IS_IN_CRC)) {
-                    auto *data = field.GetData();
+                    auto *data = field.GetPtr();
                     size_t size = field.GetSize();
                     crc = container.crc_.Append(crc, {(uint8_t*)data, size});
                 }

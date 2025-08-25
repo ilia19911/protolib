@@ -41,7 +41,12 @@ namespace proto {
      *
      * Used in templates where an optional data type is required.
      */
-    struct EmptyDataType { };
+    struct EmptyDataType {
+        bool operator==(const EmptyDataType& other) const{
+            return true;
+        }
+
+    };
 
     /// Special constant meaning "size can be any".
     static constexpr size_t kAnySize = std::numeric_limits<size_t>::max();
@@ -133,12 +138,16 @@ namespace proto {
         [[nodiscard]] size_t GetOffset([[maybe_unused]] void* opt = nullptr) const { return offset_; }
 
         /// @return Current size in bytes.
-        [[nodiscard]] virtual size_t GetSize() const { return size_; }
+        [[nodiscard]] virtual size_t GetSize() const { return size_ < MAX_SIZE? size_:MAX_SIZE; }
 
         /// @return Typed pointer to field data.
         [[nodiscard]] constexpr const FieldType* GetData() const {
             return reinterpret_cast<FieldType*>(BASE + offset_);
         }
+        [[nodiscard]] constexpr const uint8_t* GetPtr() const {
+            return (BASE + offset_);
+        }
+
 
         /**
          * @brief Print field contents in a table format.

@@ -2,6 +2,10 @@ include(GNUInstallDirs)
 
 add_library(LacteProtocol STATIC
         ymodem.cpp
+        ../../include/ProtocolEndpoint.hpp
+        LacteEndpoint.hpp
+        ../../include/FieldEndpoint.hpp
+        LacteObjects.hpp
 )
 
 set_target_properties(LacteProtocol PROPERTIES EXPORT_NAME lacte)

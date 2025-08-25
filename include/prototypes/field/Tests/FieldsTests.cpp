@@ -250,14 +250,14 @@ TEST_F(FieldsTestSuite, DataField_VariantAndLookups) {
 
     // Not set → monostate
     {
-        auto v0 = df.GetVariant();
+        auto v0 = df.GetData();
         EXPECT_TRUE(std::holds_alternative<std::monostate>(v0));
     }
 
     // Fixed-size type
     ASSERT_TRUE(df.SetId(1));
     {
-        auto v1 = df.GetVariant();
+        auto v1 = df.GetData();
         EXPECT_TRUE(std::holds_alternative<proto::test::dataType>(v1));
         EXPECT_EQ(df.GetSize(), sizeof(proto::test::dataType));
     }
@@ -265,7 +265,7 @@ TEST_F(FieldsTestSuite, DataField_VariantAndLookups) {
     // Pointer type → just verify the variant holds uint8_t*
     ASSERT_TRUE(df.SetId(2));
     {
-        auto v2 = df.GetVariant();
+        auto v2 = df.GetData();
         EXPECT_TRUE(std::holds_alternative<uint8_t*>(v2));
         // Size for pointer payload is managed externally (container); no size check here.
     }
@@ -273,8 +273,8 @@ TEST_F(FieldsTestSuite, DataField_VariantAndLookups) {
     // Empty data → monostate and size 0
     ASSERT_TRUE(df.SetId(3));
     {
-        auto v3 = df.GetVariant();
-        EXPECT_TRUE(std::holds_alternative<std::monostate>(v3));
+        auto v3 = df.GetData();
+        EXPECT_TRUE(std::holds_alternative<proto::EmptyDataType>(v3));
         EXPECT_EQ(df.GetSize(), 0u);
     }
 
@@ -305,14 +305,14 @@ TEST_F(FieldsTestSuite, DataField_EnumIdsWork) {
 
     // Not set → monostate
     {
-        auto v0 = df.GetVariant();
+        auto v0 = df.GetData();
         EXPECT_TRUE(std::holds_alternative<std::monostate>(v0));
     }
 
     // A → fixed-size
     ASSERT_TRUE(df.SetId(static_cast<int>(Pk::A)));
     {
-        auto v = df.GetVariant();
+        auto v = df.GetData();
         ASSERT_TRUE(std::holds_alternative<proto::test::dataType>(v));
         EXPECT_EQ(df.GetSize(), sizeof(proto::test::dataType));
     }
@@ -320,15 +320,15 @@ TEST_F(FieldsTestSuite, DataField_EnumIdsWork) {
     // B → pointer payload
     ASSERT_TRUE(df.SetId(static_cast<int>(Pk::B)));
     {
-        auto v = df.GetVariant();
+        auto v = df.GetData();
         EXPECT_TRUE(std::holds_alternative<uint8_t*>(v));
     }
 
     // C → empty
     ASSERT_TRUE(df.SetId(static_cast<int>(Pk::C)));
     {
-        auto v = df.GetVariant();
-        EXPECT_TRUE(std::holds_alternative<std::monostate>(v));
+        auto v = df.GetData();
+        EXPECT_TRUE(std::holds_alternative<proto::EmptyDataType>(v));
         EXPECT_EQ(df.GetSize(), 0u);
     }
 }

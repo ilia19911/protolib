@@ -108,7 +108,7 @@ namespace Lacte::Proto {
                     board_proto.Answer(packetNumbers::RESTART);
                 }
                 else if(*field.GetData() == packetNumbers::GET_PARAMS){
-                    auto param = *field_data.GetData();
+                    auto param = *field_data.GetPtr();
                     if(param == Params::numbers::MAGIC_WORD){
                         board_proto.Answer(packetNumbers::GET_PARAMS, magic_word, sizeof(magic_word));
                     }

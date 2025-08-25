@@ -53,47 +53,6 @@ namespace proto::test{
     };
 #pragma pack(pop)
 
-//    extern uint8_t buffer1[100];
-//    extern uint8_t buffer2[100];
-//    extern uint8_t buffer3[100];
-//    extern uint8_t buffer4[100];
-//    extern uint8_t buffer5[100];
-//    extern uint8_t buffer6[100];
-//    extern uint8_t pref1[3];
-//
-//    using MyPackets = std::tuple<
-//            proto::PacketInfo<1, dataType>,
-//            proto::PacketInfo<2, dataType2>,
-//            proto::PacketInfo<3, dataType3>,
-//            proto::PacketInfo<4, proto::EmptyDataType>
-//    >;
-//
-//    using idFieldType = TestFieldPrototype<proto::FieldName::ID_FIELD, uint8_t *, buffer1, proto::FieldFlags::NOTHING, 3, 3, pref1>;
-//    using lenFieldType = TestFieldPrototype<proto::FieldName::LEN_FIELD, uint8_t, buffer1, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
-//    using alenFieldType = TestFieldPrototype<proto::FieldName::ALEN_FIELD, uint8_t, buffer1, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
-//    using dataFieldType = TestFieldPrototype<proto::FieldName::DATA_FIELD, dataType, buffer1, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
-//    using crcFieldType = TestFieldPrototype<proto::FieldName::CRC_FIELD, uint16_t, buffer1,  proto::FieldFlags::IS_IN_LEN>;
-//    using proto_fields =
-//            std::tuple<idFieldType,
-//                    lenFieldType,
-//                    alenFieldType,
-//                    dataFieldType,
-//                    crcFieldType>;
-//
-//    using idField2Type = TestFieldPrototype<proto::FieldName::ID_FIELD, uint8_t*, buffer1, proto::FieldFlags::NOTHING, 3, 3, pref1>;
-//    using lenField2Type = TestFieldPrototype<proto::FieldName::LEN_FIELD, uint8_t, buffer2, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
-//    using alenField2Type = TestFieldPrototype<proto::FieldName::ALEN_FIELD, uint8_t, buffer3, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
-//    using typeField2Type = TestFieldPrototype<proto::FieldName::TYPE_FIELD, uint8_t, buffer4, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
-//    using dataField2Type = TestDataFieldPrototype<MyPackets, buffer5, proto::FieldFlags::IS_IN_LEN>;
-//    using crcField2Type = TestFieldPrototype<proto::FieldName::CRC_FIELD, uint16_t, buffer6,  proto::FieldFlags::IS_IN_LEN>;
-//    using proto_fields2 =
-//            std::tuple<idField2Type,
-//                    lenField2Type,
-//                    alenField2Type,
-//                    typeField2Type,
-//                    dataField2Type,
-//                    crcField2Type>;
-
 
     template<uint8_t *BASE, uint8_t *BASE2 = BASE, uint8_t *BASE3 = BASE, uint8_t *BASE4 = BASE, uint8_t *BASE5 = BASE>
     class SympleFields{

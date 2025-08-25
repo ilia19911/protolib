@@ -39,20 +39,20 @@ protected:
     static auto& tx_simple()  {
         static SimpleProto p; // lives for whole test run
         // friend accessors are defined in Prototypes.hpp test helpers
-        return p.tx();
+        return p.tx;
     }
     static auto& tx_complex() {
         static ComplexProto p;
-        return p.tx();
+        return p.tx;
     }
 
     static auto& rx_simple() {
         static SimpleProtoMixed p; // separate instance
-        return p.rx();
+        return p.rx;
     }
     static auto& rx_complex() {
         static ComplexProtoMixed p;
-        return p.rx();
+        return p.rx;
     }
 
     // Helper: feed a built TX frame into RX in field order and collect a callback
@@ -71,7 +71,7 @@ protected:
 
         // Feed RX in protocol field order, exactly the bytes each field owns.
         tx.for_each_type([&](auto& fld){
-            const uint8_t* p   = reinterpret_cast<const uint8_t*>(fld.GetData());
+            const uint8_t* p = fld.GetPtr();
             Span<uint8_t> chunk(const_cast<uint8_t*>(p), fld.GetSize());
             size_t read = 0;
             rx.Fill(chunk, read);
@@ -185,7 +185,7 @@ TEST_F(TxContainerSuite, Send_ComplexPacket_TypeAndData) {
         // Round-trip into RX and verify the variant matches the type id we sent
         auto& rx = rx_complex();
         bool ok = RoundtripToRx(rx, tx, [&](std::decay_t<decltype(rx)>& cont){
-            auto v = cont.template Get<FieldName::DATA_FIELD>().GetVariant();
+            auto v = cont.template Get<FieldName::DATA_FIELD>().GetData();
             switch (t) {
                 case 1: EXPECT_TRUE(std::holds_alternative<proto::test::dataType>(v)); break;
                 case 2: EXPECT_TRUE(std::holds_alternative<proto::test::dataType2>(v)); break;
@@ -216,7 +216,7 @@ TEST_F(TxContainerSuite, Complex_FrameIsContiguousFromIdBase) {
     // Just verify that each field's pointer lies inside [base, base+n)
     size_t min_off = SIZE_MAX, max_end = 0;
     tx.for_each_type([&](auto& fld){
-        auto* p = reinterpret_cast<const uint8_t*>(fld.GetData());
+        auto* p = fld.GetPtr();
         size_t off = static_cast<size_t>(p - base);
         min_off = std::min(min_off, off);
         max_end = std::max(max_end, off + fld.GetSize());

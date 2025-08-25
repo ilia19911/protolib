@@ -90,7 +90,7 @@ namespace proto {
     public:
         static constexpr bool IS_DATA_FIELD{true}; //!< Trait tag.
         using Packets = PACKETS;                   //!< Tuple of PacketInfo.
-        using Variant = typename MakePacketVariant<PACKETS>::type; //!< Variant with all payload alternatives.
+        using FieldType = typename MakePacketVariant<PACKETS>::type; //!< Variant with all payload alternatives.
 
         /**
          * @brief Set active packet ID.
@@ -129,7 +129,7 @@ namespace proto {
          * @return Size or proto::kAnySize if unresolved.
          */
         [[nodiscard]] size_t GetSize() const override {
-            return PacketSize(current_id_);
+            return PacketSize(current_id_) ;
         }
 
         /**
@@ -157,7 +157,7 @@ namespace proto {
          *
          * @return Variant holding current value.
          */
-        Variant GetVariant() const {
+        FieldType GetData() const {
             return GetVariantImpl<0>();
         }
 
@@ -224,19 +224,19 @@ namespace proto {
 
         /// Recursive helper for GetVariant.
         template<std::size_t I>
-        Variant GetVariantImpl() const {
+        FieldType GetVariantImpl() const {
             if constexpr (I >= std::tuple_size_v<Packets>) {
                 return std::monostate{};
             } else {
                 using Info = std::tuple_element_t<I, Packets>;
                 using T = typename Info::type;
                 if (current_id_ == static_cast<int>(Info::id)) {
-                    if constexpr (std::is_same_v<T, EmptyDataType>) {
-                        return std::monostate{};
-                    } else if constexpr (std::is_pointer_v<T>) {
-                        return reinterpret_cast<T>(this->base_ + this->offset_);
+                    if constexpr (std::is_pointer_v<T>) {
+                        // Disambiguate variant construction for pointer types
+                        return FieldType{std::in_place_index<1 + I>, reinterpret_cast<T>(this->base_ + this->offset_)};
                     } else {
-                        return *reinterpret_cast<const T*>(this->base_ + this->offset_);
+                        // For non-pointer, non-EmptyDataType types
+                        return FieldType{std::in_place_index<1 + I>, *reinterpret_cast<const T*>(this->base_ + this->offset_)};
                     }
                 }
                 return GetVariantImpl<I + 1>();

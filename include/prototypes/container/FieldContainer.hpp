@@ -14,7 +14,8 @@
 #include <stdexcept>
 #include <utility>
 #include <unordered_map>
-
+#include <tuple>
+#include <type_traits>
 #include "prototypes/field/FieldPrototype.hpp"
 #include "prototypes/field/DataField.hpp"
 #include "libraries/crc/crcSoft/CrcSoft.hpp"
@@ -48,6 +49,38 @@ namespace proto
     };
 
     /**
+     * @brief Metafunction to find a field type by its FieldName within a tuple of field types.
+     *
+     * @tparam Tuple  Tuple of concrete field types (not prototypes).
+     * @tparam NAME   Target FieldName to search for.
+     * @tparam Index  Current index (implementation detail).
+     */
+    // Lookup helper that avoids out-of-bounds tuple_element instantiation
+    template<typename Tuple, FieldName NAME, std::size_t Index, bool AtEnd = (Index >= std::tuple_size_v<Tuple>)>
+    struct FieldByNameImpl;
+
+    // End of recursion: no such field
+    template<typename Tuple, FieldName NAME, std::size_t Index>
+    struct FieldByNameImpl<Tuple, NAME, Index, true> {
+        using type = void;
+    };
+
+    // Recursive case
+    template<typename Tuple, FieldName NAME, std::size_t Index>
+    struct FieldByNameImpl<Tuple, NAME, Index, false> {
+        using Curr = std::tuple_element_t<Index, Tuple>;
+        using type = std::conditional_t<
+            (Curr::name_ == NAME),
+            Curr,
+            typename FieldByNameImpl<Tuple, NAME, Index + 1>::type
+        >;
+    };
+
+    // Public alias: preserves the existing FieldByName<...>::type usage
+    template<typename Tuple, FieldName NAME, std::size_t Index = 0>
+    using FieldByName = FieldByNameImpl<Tuple, NAME, Index>;
+
+    /**
      * @brief Generic container for protocol fields with CRC and debug support.
      *
      * This class template stores a tuple of protocol field instances, provides methods
@@ -76,6 +109,30 @@ namespace proto
         FieldContainer() = default;
 
         /**
+         * @brief Tuple type with concrete field instances for this container.
+         */
+        using FieldsTuple = typename TransformToFieldsTuple<Fields>::Type;
+
+        /**
+         * @brief Return type deduced from DATA_FIELD at compile time.
+         *
+         * - If the container has a DATA_FIELD and that field satisfies
+         *   `is_data_field_prototype<>::value`, this resolves to the field's `Variant` type.
+         * - If the container has a DATA_FIELD that is a regular field, this resolves to the
+         *   field's `FieldType`.
+         * - If the container has no DATA_FIELD, this resolves to `void`.
+         */
+//        using ReturnType = typename FieldByName<FieldsTuple, FieldName::DATA_FIELD>::type::FieldType;
+            using DataField  = typename FieldByName<FieldsTuple, FieldName::DATA_FIELD>::type;
+            using ReturnType = decltype(std::declval<const DataField&>().GetData());
+
+//        /**
+//         * @brief Backward-compatible alias expected by some code paths.
+//         * @note Provided to satisfy existing usages (e.g., ProtocolEndpoint) that refer to `Variant`.
+//         */
+//        using Variant = ReturnType;
+
+        /**
          * @brief Enable or disable debug mode for the container and its fields.
          *
          * When debug is enabled, additional diagnostic information may be output
@@ -96,14 +153,11 @@ namespace proto
             return debug_;
         }
 
-        /**
-         * @brief Name identifier for the container (optional, user-defined).
-         */
-        const int32_t Name{};
+
         /**
          * @brief The number of fields in the container.
          */
-        static constexpr std::size_t size = std::tuple_size<typename TransformToFieldsTuple<Fields>::Type>::value;
+        static constexpr std::size_t size = std::tuple_size<FieldsTuple>::value;
 
         /**
          * @brief Access a field by its FieldName (compile-time constant).
@@ -151,9 +205,9 @@ namespace proto
          */
         template<FieldName NAME, std::size_t Index = 0>
         static constexpr bool HasField() {
-            if constexpr (Index >= std::tuple_size<typename TransformToFieldsTuple<Fields>::Type>::value) {
+            if constexpr (Index >= std::tuple_size<FieldsTuple>::value) {
                 return false;
-            } else if constexpr (std::tuple_element_t<Index, typename TransformToFieldsTuple<Fields>::Type>::name_ == NAME) {
+            } else if constexpr (std::tuple_element_t<Index, FieldsTuple>::name_ == NAME) {
                 return true;
             } else {
                 return HasField<NAME, Index + 1>();
@@ -190,7 +244,7 @@ namespace proto
          */
         template<typename Func>
         constexpr void for_each_type( Func&& f) {
-            constexpr std::size_t N = std::tuple_size_v<typename TransformToFieldsTuple<Fields>::Type>;
+            constexpr std::size_t N = std::tuple_size_v<FieldsTuple>;
             for_each_type_impl(this->fields_, std::forward<Func>(f), std::make_index_sequence<N>{});
         }
 
@@ -202,7 +256,7 @@ namespace proto
         /**
          * @brief Tuple holding all field instances.
          */
-        typename TransformToFieldsTuple<Fields>::Type fields_;
+        FieldsTuple fields_;
         /**
          * @brief Map of field buffer pointers to their offsets (used for serialization/deserialization).
          */
