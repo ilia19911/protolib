@@ -1,3 +1,16 @@
+# [1.0.0-dev.11](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.10...v1.0.0-dev.11) (2025-08-26)
+
+
+### Bug Fixes
+
+* **constexpr:** добавил constexpr в установку константного значения ([43664ec](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/43664ecc4a83425a02e683b27a3975fb4e9890f1))
+* **ReturnType:** поправил возвращаемое значение. ([0750b92](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/0750b9275340a9d04dae116bf191b24872225e26))
+
+
+### Features
+
+* **refact:** добавил шаблон проекта ([740fd0b](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/740fd0b4e2f0320d8d21c1a42dc5f3c9de5eef50))
+
 # [1.0.0-dev.10](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.9...v1.0.0-dev.10) (2025-08-24)
 
 
