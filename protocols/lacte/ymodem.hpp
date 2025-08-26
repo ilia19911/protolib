@@ -15,6 +15,7 @@ public:
         receive_callback_ = interface_.AddReceiveCallback([this](Span<uint8_t> buffer, size_t &read){
             memcpy(receive_buffer, buffer.data(), buffer.size());
             received_count = buffer.size();
+            read+=buffer.size();
             received = true;
             cv.notify_all();
         });

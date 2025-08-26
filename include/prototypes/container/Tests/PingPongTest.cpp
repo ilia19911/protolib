@@ -63,12 +63,14 @@ TEST(PingPongContainerTest, SanyCaseType1){
 
     // 1) First request/response
     auto r1 = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType));
-    assertEqual(r1, testType);
+    auto r1_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r1);
+    assertEqual(r1_data_field, testType);
 
     // 2) Change payload and request again
     testType.d = 0.234542;
     auto r2 = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType));
-    assertEqual(r2, testType);
+    auto r2_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r2);
+    assertEqual(r2_data_field, testType);
 }
 TEST(PingPongContainerTest, NoiseType1){
     using namespace proto;
@@ -101,7 +103,8 @@ TEST(PingPongContainerTest, NoiseType1){
     auto task = [&](auto &noiseData){
         interface.Write(Span<uint8_t>{noiseData, sizeof(noiseData)}, 1s);
         auto r = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType));
-        assertEqual(r, testType);
+        auto r_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r);
+        assertEqual(r_data_field, testType);
     };
 
     // 1) random noise before a valid request
@@ -144,12 +147,14 @@ TEST(PingPongContainerTest, SanyCaseType2){
 
     // First request with default-initialized testType2
     auto r1 = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType2));
-    assertEqual(r1, testType2);
+        auto r1_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r1);
+    assertEqual(r1_data_field, testType2);
 
     // Second request after modifying a field (if any)
     testType.d = 0.234542; // keep some deterministic change in other payload type
     auto r2 = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType2));
-    assertEqual(r2, testType2);
+        auto r2_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r2);
+    assertEqual(r2_data_field, testType2);
 }
 
 TEST(PingPongContainerTest, NoiseType2){
@@ -182,7 +187,9 @@ TEST(PingPongContainerTest, NoiseType2){
     auto task = [&](auto &noiseData){
         interface.Write(Span<uint8_t>{noiseData, sizeof(noiseData)}, 1s);
         auto r = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType2));
-        assertEqual(r, testType2);
+        auto r_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r);
+
+        assertEqual(r_data_field, testType2);
     };
 
     // Random garbage before frame

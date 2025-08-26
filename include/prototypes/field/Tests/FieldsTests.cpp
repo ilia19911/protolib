@@ -266,7 +266,7 @@ TEST_F(FieldsTestSuite, DataField_VariantAndLookups) {
     ASSERT_TRUE(df.SetId(2));
     {
         auto v2 = df.GetCopy();
-        EXPECT_TRUE(std::holds_alternative<uint8_t*>(v2));
+        EXPECT_TRUE(std::holds_alternative<std::vector<uint8_t>>(v2));
         // Size for pointer payload is managed externally (container); no size check here.
     }
 
@@ -321,7 +321,7 @@ TEST_F(FieldsTestSuite, DataField_EnumIdsWork) {
     ASSERT_TRUE(df.SetId(static_cast<int>(Pk::B)));
     {
         auto v = df.GetCopy();
-        EXPECT_TRUE(std::holds_alternative<uint8_t*>(v));
+        EXPECT_TRUE(std::holds_alternative<std::vector<uint8_t>>(v));
     }
 
     // C → empty

@@ -13,7 +13,7 @@
  * @code{.cpp}
  * using Map = std::tuple<
  *     proto::PacketInfo<1, MyHeader>,
- *     proto::PacketInfo<2, uint8_t*>,
+ *     proto::PacketInfo<2, std::vector<uint8_t>>,
  *     proto::PacketInfo<3, proto::EmptyDataType>
  * >;
  *
@@ -34,8 +34,10 @@
 #include <variant>
 #include <stdexcept>
 #include <optional>
+#include <cstring>
 
 #include "prototypes/field/FieldPrototype.hpp"
+#include "UniqueVariant.hpp"
 
 namespace proto {
 
@@ -51,24 +53,6 @@ namespace proto {
         using type = PacketType;           //!< Associated payload type.
     };
 
-    /**
-     * @brief Helper to build a std::variant containing all packet types in PACKETS.
-     *
-     * Expands PacketInfo::type from each element of PACKETS into the variant.
-     * Always prepends std::monostate for "no value".
-     *
-     * @tparam PACKETS A std::tuple of PacketInfo entries.
-     */
-    template<typename PACKETS>
-    struct MakePacketVariant {
-    private:
-        template<std::size_t... I>
-        static auto Helper(std::index_sequence<I...>)
-        -> std::variant<std::monostate, typename std::tuple_element_t<I, PACKETS>::type...>;
-    public:
-        /// @brief Variant type: std::variant<std::monostate, PacketInfo::type...>.
-        using type = decltype(Helper(std::make_index_sequence<std::tuple_size_v<PACKETS>>{}));
-    };
 
     /**
      * @brief Field prototype representing a DATA field that can contain
@@ -90,7 +74,7 @@ namespace proto {
     public:
         static constexpr bool IS_DATA_FIELD{true}; //!< Trait tag.
         using Packets = PACKETS;                   //!< Tuple of PacketInfo.
-        using FieldType = typename MakePacketVariant<PACKETS>::type; //!< Variant with all payload alternatives.
+        using FieldType = typename meta::UniqueVariant<PACKETS>::type; //!< Variant with all payload alternatives.
 
         /**
          * @brief Set active packet ID.
@@ -100,28 +84,10 @@ namespace proto {
         bool SetId(int id) {
             bool valid = false;
             std::apply([&](auto&&... packet) {
-                ((packet.id == id ? (void)(valid = true) : (void)0), ...);
+                ((packet.id == id ? (void)(valid = true, this->template SetSize<typename std::decay_t<decltype(packet)>::type>()) : (void)0), ...);
             }, Packets{});
             if (valid) current_id_ = id;
             return valid;
-        }
-
-        /**
-         * @brief Get typed pointer if the active packet matches type T.
-         * @tparam T Desired payload type.
-         * @return Pointer to T or nullptr if mismatch.
-         */
-        template<typename T>
-        T* GetIf() {
-            if constexpr (std::is_same_v<T, EmptyDataType>) {
-                return nullptr;
-            } else {
-                constexpr int id = GetNumber<T>();
-                if (current_id_ == id) {
-                    return reinterpret_cast<T*>(this->base_ + this->offset_);
-                }
-                return nullptr;
-            }
         }
 
         /**
@@ -130,22 +96,6 @@ namespace proto {
          */
         [[nodiscard]] size_t GetSize() const override {
             return PacketSize(current_id_) ;
-        }
-
-        /**
-         * @brief Get typed pointer if the current packet matches compile-time NAME.
-         * @tparam NAME Expected protocol ID.
-         * @tparam T    Expected payload type.
-         * @return Pointer to T or nullptr if mismatch.
-         */
-        template<int NAME, typename T>
-        T* GetAs() {
-            constexpr auto index = GetIndex<NAME>();
-            using Current = std::tuple_element_t<index, Packets>;
-            if (current_id_ == Current::id) {
-                return reinterpret_cast<T*>(this->base_ + this->offset_);
-            }
-            return nullptr;
         }
 
         /**
@@ -226,17 +176,27 @@ namespace proto {
         template<std::size_t I>
         FieldType GetVariantImpl() const {
             if constexpr (I >= std::tuple_size_v<Packets>) {
-                return std::monostate{};
+                return FieldType{}; // monostate alternative (index 0)
             } else {
                 using Info = std::tuple_element_t<I, Packets>;
                 using T = typename Info::type;
+                using N = std::remove_cv_t<std::remove_reference_t<T>>;
+                // Alternative index inside FieldType: 1 + position of N in FieldList
+                static constexpr std::size_t Alt =
+                        meta::UniqueVariant<PACKETS>::template alt_index_transformed<N>;
+
                 if (current_id_ == static_cast<int>(Info::id)) {
                     if constexpr (std::is_pointer_v<T>) {
-                        // Disambiguate variant construction for pointer types
-                        return FieldType{std::in_place_index<1 + I>, reinterpret_cast<T>(this->base_ + this->offset_)};
+                        using Elem = std::remove_const_t<std::remove_pointer_t<T>>;
+                        const auto* raw = reinterpret_cast<const Elem*>(this->base_ + this->offset_);
+                        const std::size_t count = this->GetSize() / sizeof(Elem);
+                        std::vector<Elem> vec(count);
+                        if (count) {
+                            std::memcpy(vec.data(), raw, count * sizeof(Elem));
+                        }
+                        return FieldType{std::in_place_index<Alt>, std::move(vec)};
                     } else {
-                        // For non-pointer, non-EmptyDataType types
-                        return FieldType{std::in_place_index<1 + I>, *reinterpret_cast<const T*>(this->base_ + this->offset_)};
+                        return FieldType{std::in_place_index<Alt>, *reinterpret_cast<const T*>(this->base_ + this->offset_)};
                     }
                 }
                 return GetVariantImpl<I + 1>();

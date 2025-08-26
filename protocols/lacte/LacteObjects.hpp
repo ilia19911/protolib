@@ -11,8 +11,8 @@
 
 #include "ProtocolEndpoint.hpp"
 
-namespace Lacte::Proto {
-    enum packetNumbers : uint8_t {
+namespace proto::lacte {
+    enum PacketNumbers : uint8_t {
         INFO = 0x00,
         VERSION = 0x01,
         UID = 0x02,
@@ -21,6 +21,18 @@ namespace Lacte::Proto {
         SET_PARAMS = 0x40,
         GET_PARAMS = 0x41,
         RESTART = 0x7F
+    };
+
+    enum class Params : uint8_t {
+        MAGIC_WORD = 0,
+        LACTE_SN = 1,
+        PROD_DATE = 2,
+        RESERVE = 3,
+        MCU_UID = 4,
+        MACHINE_SN = 5,
+        ACTIVATION_TIME = 6,
+        DRINK_COUNTER = 7,
+        TIME_COUNTER = 8
     };
 
     enum class BoardStatus: uint8_t {
@@ -47,7 +59,6 @@ namespace Lacte::Proto {
             return std::memcmp(id, other.id, sizeof(id)) == 0;
         }
     };
-
     struct InfoPacketType{
         BoardStatus status;
         uint16_t errors;
@@ -56,7 +67,7 @@ namespace Lacte::Proto {
             return ((errors >> (int)BoardErrors::ERROR_FLAG_CALIB_ERROR) & 1);
         }
 
-        bool CheckError(BoardErrors offset) const{
+        [[nodiscard]] bool CheckError(BoardErrors offset) const{
             return ((errors >> (int)offset) & 1);
         }
 
@@ -67,7 +78,6 @@ namespace Lacte::Proto {
             return status != other.status || errors != other.errors;
         }
     };
-
     struct VersionPacketType{
         uint8_t major;
         uint8_t minor;
@@ -75,7 +85,6 @@ namespace Lacte::Proto {
             return major == other.major && minor == other.minor;
         }
     };
-
     struct UIDPacketType{
         uint8_t uid[12];
         bool operator==(const UIDPacketType& other) const {
@@ -89,112 +98,78 @@ namespace Lacte::Proto {
             return std::memcmp(data, other.data, sizeof(data)) == 0;
         }
     };
-#pragma pack(pop)
-
-    class Params{
-    public:
-        enum numbers{
-            MAGIC_WORD = 0,
-            LACTE_SN = 1,
-            PROD_DATE = 2,
-            RESERVE = 3,
-            MCU_UID = 4,
-            MACHINE_SN = 5,
-            ACTIVATION_TIME = 6,
-            DRINK_COUNTER = 7,
-            TIME_COUNTER = 8,
-        };
-
-
-#pragma pack(push,1)
-        struct MagicWord{
-            numbers name = numbers::MAGIC_WORD;   // non-const to allow assignment
-            uint8_t data[2]{};
-            [[nodiscard]] bool validate() const { return name == numbers::MAGIC_WORD; }
-            bool operator==(const MagicWord& other) const {
-                return std::memcmp(data, other.data, sizeof(data)) == 0;
-            }
-        };
-        struct LacteSn{
-            numbers name = numbers::LACTE_SN;     // non-const
-            uint8_t data[6]{};
-            [[nodiscard]] bool validate() const { return name == numbers::LACTE_SN; }
-            bool operator==(const LacteSn& other) const {
-                return std::memcmp(data, other.data, sizeof(data)) == 0;
-            }
-        };
-        struct ProdDate{
-            numbers name = numbers::PROD_DATE;    // non-const
-            uint8_t data[4]{};
-            [[nodiscard]] bool validate() const { return name == numbers::PROD_DATE; }
-            bool operator==(const ProdDate& other) const {
-                return std::memcmp(data, other.data, sizeof(data)) == 0;
-            }
-        };
-        struct Reserve{
-            numbers name = numbers::RESERVE;      // non-const
-            uint8_t data[4]{};
-            [[nodiscard]] bool validate() const { return name == numbers::RESERVE; }
-            bool operator==(const Reserve& other) const {
-                return std::memcmp(data, other.data, sizeof(data)) == 0;
-            }
-        };
-        struct McuUid{
-            numbers name = numbers::MCU_UID;      // non-const
-            uint8_t data[12]{};
-            [[nodiscard]] bool validate() const { return name == numbers::MCU_UID; }
-            bool operator==(const McuUid& other) const {
-                return std::memcmp(data, other.data, sizeof(data)) == 0;
-            }
-        };
-        struct MachineSn{
-            numbers name = numbers::MACHINE_SN;   // non-const
-            uint8_t data[4]{};
-            [[nodiscard]] bool validate() const { return name == numbers::MACHINE_SN; }
-            bool operator==(const MachineSn& other) const {
-                return std::memcmp(data, other.data, sizeof(data)) == 0;
-            }
-        };
-        struct ActivationTime{
-            numbers name = numbers::ACTIVATION_TIME; // non-const
-            uint8_t data[4]{};
-            [[nodiscard]] bool validate() const { return name == numbers::ACTIVATION_TIME; }
-            bool operator==(const ActivationTime& other) const {
-                return std::memcmp(data, other.data, sizeof(data)) == 0;
-            }
-        };
-        struct DrinkCounter{
-            numbers name = numbers::DRINK_COUNTER;   // non-const
-            uint8_t data[4]{};
-            [[nodiscard]] bool validate() const { return name == numbers::DRINK_COUNTER; }
-            bool operator==(const DrinkCounter& other) const {
-                return std::memcmp(data, other.data, sizeof(data)) == 0;
-            }
-        };
-        struct TimeCounter{
-            numbers name = numbers::TIME_COUNTER;    // non-const
-            uint8_t data[4]{};
-            [[nodiscard]] bool validate() const { return name == numbers::TIME_COUNTER; }
-            bool operator==(const TimeCounter& other) const {
-                return std::memcmp(data, other.data, sizeof(data)) == 0;
-            }
-        };
-#pragma pack(pop)
-
+    struct MagicWord{
+        uint8_t data[2]{};
+        bool operator==(const MagicWord& other) const {
+            return std::memcmp(data, other.data, sizeof(data)) == 0;
+        }
     };
+    struct LacteSn{
+        uint8_t data[6]{};
+        bool operator==(const LacteSn& other) const {
+            return std::memcmp(data, other.data, sizeof(data)) == 0;
+        }
+    };
+    struct ProdDate{
+        uint8_t data[4]{};
+        bool operator==(const ProdDate& other) const {
+            return std::memcmp(data, other.data, sizeof(data)) == 0;
+        }
+    };
+    struct Reserve{
+        uint8_t data[4]{};
+        bool operator==(const Reserve& other) const {
+            return std::memcmp(data, other.data, sizeof(data)) == 0;
+        }
+    };
+    struct McuUid{
+        uint8_t data[12]{};
+        bool operator==(const McuUid& other) const {
+            return std::memcmp(data, other.data, sizeof(data)) == 0;
+        }
+    };
+    struct MachineSn{
+        uint8_t data[4]{};
+        bool operator==(const MachineSn& other) const {
+            return std::memcmp(data, other.data, sizeof(data)) == 0;
+        }
+    };
+    struct ActivationTime{
+        uint8_t data[4]{};
+        bool operator==(const ActivationTime& other) const {
+            return std::memcmp(data, other.data, sizeof(data)) == 0;
+        }
+    };
+    struct DrinkCounter{
+        uint8_t data[4]{};
+        bool operator==(const DrinkCounter& other) const {
+            return std::memcmp(data, other.data, sizeof(data)) == 0;
+        }
+    };
+    struct TimeCounter{
+        uint8_t data[4]{};
+        bool operator==(const TimeCounter& other) const {
+            return std::memcmp(data, other.data, sizeof(data)) == 0;
+        }
+    };
+
+#pragma pack(pop)
+
+
 
     template<uint8_t* BASE>
     struct ParamPacket{
+
         using Packets = std::tuple<
-                proto::PacketInfo<Params::MAGIC_WORD, Params::MagicWord>,
-                proto::PacketInfo<Params::LACTE_SN, Params::LacteSn>,
-                proto::PacketInfo<Params::PROD_DATE, Params::ProdDate>,
-                proto::PacketInfo<Params::RESERVE, Params::Reserve>,
-                proto::PacketInfo<Params::MCU_UID, Params::McuUid>,
-                proto::PacketInfo<Params::MACHINE_SN, Params::MachineSn>,
-                proto::PacketInfo<Params::ACTIVATION_TIME, Params::ActivationTime>,
-                proto::PacketInfo<Params::DRINK_COUNTER, Params::DrinkCounter>,
-                proto::PacketInfo<Params::TIME_COUNTER, Params::TimeCounter>
+                proto::PacketInfo<(size_t)Params::MAGIC_WORD, MagicWord>,
+                proto::PacketInfo<(size_t)Params::LACTE_SN, LacteSn>,
+                proto::PacketInfo<(size_t)Params::PROD_DATE, ProdDate>,
+                proto::PacketInfo<(size_t)Params::RESERVE, Reserve>,
+                proto::PacketInfo<(size_t)Params::MCU_UID, McuUid>,
+                proto::PacketInfo<(size_t)Params::MACHINE_SN, MachineSn>,
+                proto::PacketInfo<(size_t)Params::ACTIVATION_TIME, ActivationTime>,
+                proto::PacketInfo<(size_t)Params::DRINK_COUNTER, DrinkCounter>,
+                proto::PacketInfo<(size_t)Params::TIME_COUNTER, TimeCounter>
         >;
         using typeFieldType = proto::FieldPrototype< proto::FieldName::TYPE_FIELD, uint8_t, BASE, proto::FieldFlags::NOTHING>;
         using dataFieldType = proto::DataFieldPrototype< Packets,BASE, proto::FieldFlags::NOTHING>;
@@ -205,36 +180,36 @@ namespace Lacte::Proto {
         >;
     };
 
-template<uint8_t *BASE>
-class ParamProtocol : public proto::ProtocolEndpoint<
-    typename ParamPacket<BASE>::packet_fields,
-    typename ParamPacket<BASE>::packet_fields> {
- public:
-};
+    template<uint8_t *BASE>
+    class ParamProtocol : public proto::ProtocolEndpoint<
+            typename ParamPacket<BASE>::packet_fields,
+            typename ParamPacket<BASE>::packet_fields> {
+    public:
+    };
 
     template<uint8_t* BASE>
     struct hostPacket{
-        constexpr static uint8_t host_prefix[2] = {0xFF,0x55};
+        constexpr static uint8_t prefix[2] = {0xFF,0x55};
 
-        using hostPackets = std::tuple<
-        proto::PacketInfo<INFO, proto::EmptyDataType>,
-        proto::PacketInfo<VERSION, proto::EmptyDataType>,
-        proto::PacketInfo<UID, proto::EmptyDataType>,
-        proto::PacketInfo<RFID_ID, proto::EmptyDataType>,
-        proto::PacketInfo<RFID_DATA, proto::EmptyDataType>,
-        proto::PacketInfo<SET_PARAMS, uint8_t*>,
-        proto::PacketInfo<GET_PARAMS, uint8_t*>,
-        proto::PacketInfo<RESTART, uint8_t*>
+        using Packets = std::tuple<
+                proto::PacketInfo<INFO, proto::EmptyDataType>,
+                proto::PacketInfo<VERSION, proto::EmptyDataType>,
+                proto::PacketInfo<UID, proto::EmptyDataType>,
+                proto::PacketInfo<RFID_ID, proto::EmptyDataType>,
+                proto::PacketInfo<RFID_DATA, proto::EmptyDataType>,
+                proto::PacketInfo<SET_PARAMS, uint8_t*>,
+                proto::PacketInfo<GET_PARAMS, Params>,
+                proto::PacketInfo<RESTART, uint8_t*>
         >;
 
-        using idFieldType = proto::FieldPrototype<proto::FieldName::ID_FIELD, const uint8_t*, BASE, proto::FieldFlags::NOTHING, 2, 2, hostPacket::host_prefix>;
+        using idFieldType = proto::FieldPrototype<proto::FieldName::ID_FIELD, const uint8_t*, BASE, proto::FieldFlags::NOTHING, 2, 2, hostPacket::prefix>;
         using lenFieldType = proto::FieldPrototype<proto::FieldName::LEN_FIELD, uint8_t, BASE, proto::FieldFlags::IS_IN_CRC>;
         using timeFieldType = proto::FieldPrototype<proto::FieldName::TIME_FIELD, uint32_t , BASE, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
         using typeFieldType = proto::FieldPrototype<proto::FieldName::TYPE_FIELD, uint8_t , BASE, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
-        using dataFieldType = proto::DataFieldPrototype< hostPackets,BASE, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
+        using dataFieldType = proto::DataFieldPrototype< Packets,BASE, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
         using crcFieldType = proto::FieldPrototype<proto::FieldName::CRC_FIELD, uint16_t, BASE,  proto::FieldFlags::REVERSE>;
 
-        using host_packet_fields = std::tuple<
+        using packet_fields = std::tuple<
                 idFieldType,
                 lenFieldType,
                 timeFieldType,
@@ -246,26 +221,25 @@ class ParamProtocol : public proto::ProtocolEndpoint<
 
     template<uint8_t* BASE>
     struct boardPacket {
-        constexpr static uint8_t board_prefix[2] = {0xFF,0xAA};
+        constexpr static uint8_t prefix[2] = {0xFF,0xAA};
 
-        using boardPackets = std::tuple<
-        proto::PacketInfo<INFO, InfoPacketType>,
-        proto::PacketInfo<VERSION, VersionPacketType>,
-        proto::PacketInfo<UID, UIDPacketType>,
-        proto::PacketInfo<RFID_ID, RFIDPacketType>,
-        proto::PacketInfo<RFID_DATA, RFIDDataPacketType>,
-        proto::PacketInfo<SET_PARAMS, uint8_t*>,
-        proto::PacketInfo<GET_PARAMS, uint8_t*>,
-//        proto::PacketInfo<GET_PARAMS, ParamProtocol<BASE>>
-        proto::PacketInfo<RESTART, proto::EmptyDataType>
+        using Packets = std::tuple<
+                proto::PacketInfo<INFO, InfoPacketType>,
+                proto::PacketInfo<VERSION, VersionPacketType>,
+                proto::PacketInfo<UID, UIDPacketType>,
+                proto::PacketInfo<RFID_ID, RFIDPacketType>,
+                proto::PacketInfo<RFID_DATA, RFIDDataPacketType>,
+                proto::PacketInfo<SET_PARAMS, uint8_t*>,
+                proto::PacketInfo<GET_PARAMS, uint8_t*>,
+                proto::PacketInfo<RESTART, proto::EmptyDataType>
         >;
-        using boardIdFieldType = proto::FieldPrototype<proto::FieldName::ID_FIELD, const uint8_t*, BASE, proto::FieldFlags::NOTHING, 2, 2, boardPacket::board_prefix>;
+        using boardIdFieldType = proto::FieldPrototype<proto::FieldName::ID_FIELD, const uint8_t*, BASE, proto::FieldFlags::NOTHING, 2, 2, boardPacket::prefix>;
         using boardLenFieldType = proto::FieldPrototype<proto::FieldName::LEN_FIELD, uint8_t, BASE, proto::FieldFlags::IS_IN_CRC>;
         using boardAnsCommFieldType = proto::FieldPrototype<proto::FieldName::TYPE_FIELD, uint8_t , BASE, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
-        using boardDataFieldType = proto::DataFieldPrototype<boardPackets, BASE, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
+        using boardDataFieldType = proto::DataFieldPrototype<Packets, BASE, proto::FieldFlags::IS_IN_CRC | proto::FieldFlags::IS_IN_LEN>;
         using boardcrcFieldType = proto::FieldPrototype<proto::FieldName::CRC_FIELD, uint16_t, BASE,  proto::FieldFlags::REVERSE>;
 
-        using board_packet_fields = std::tuple<
+        using packet_fields = std::tuple<
                 boardIdFieldType,
                 boardLenFieldType,
                 boardAnsCommFieldType,
@@ -274,65 +248,16 @@ class ParamProtocol : public proto::ProtocolEndpoint<
         >;
     };
 
-    // ----  CommandSpec: что шлём/что ждём у обычных команд ------------------
-    template<Lacte::Proto::packetNumbers N>
-    struct CommandSpec; // общий шаблон — не определяем (ошибка компиляции при неверном N)
-
-    template<> struct CommandSpec<Lacte::Proto::INFO> {
-        static constexpr auto Code = Lacte::Proto::INFO;
-        using Tx = proto::EmptyDataType;
-        using Rx = Lacte::Proto::InfoPacketType;
-    };
-    template<> struct CommandSpec<Lacte::Proto::VERSION> {
-        static constexpr auto Code = Lacte::Proto::VERSION;
-        using Tx = proto::EmptyDataType;
-        using Rx = Lacte::Proto::VersionPacketType;
-    };
-    template<> struct CommandSpec<Lacte::Proto::UID> {
-        static constexpr auto Code = Lacte::Proto::UID;
-        using Tx = proto::EmptyDataType;
-        using Rx = Lacte::Proto::UIDPacketType;
-    };
-    template<> struct CommandSpec<Lacte::Proto::RFID_ID> {
-        static constexpr auto Code = Lacte::Proto::RFID_ID;
-        using Tx = proto::EmptyDataType;
-        using Rx = Lacte::Proto::RFIDPacketType;
-    };
-    template<> struct CommandSpec<Lacte::Proto::RFID_DATA> {
-        static constexpr auto Code = Lacte::Proto::RFID_DATA;
-        using Tx = proto::EmptyDataType;
-        using Rx = Lacte::Proto::RFIDDataPacketType;
-    };
-    template<> struct CommandSpec<Lacte::Proto::RESTART> {
-        static constexpr auto Code = Lacte::Proto::RESTART;
-        using Tx = proto::EmptyDataType;
-        using Rx = proto::EmptyDataType;
-    };
-
-// ----  ParamSpec: соответствие номера параметра возвращаемому типу ------
-    template<Lacte::Proto::Params::numbers P>
-    struct ParamSpec; // общий шаблон — не определяем
-
-    template<> struct ParamSpec<Lacte::Proto::Params::MAGIC_WORD>      { static constexpr auto Code = Lacte::Proto::Params::MAGIC_WORD;       using Rx = Lacte::Proto::Params::MagicWord; };
-    template<> struct ParamSpec<Lacte::Proto::Params::LACTE_SN>        { static constexpr auto Code = Lacte::Proto::Params::LACTE_SN;         using Rx = Lacte::Proto::Params::LacteSn; };
-    template<> struct ParamSpec<Lacte::Proto::Params::PROD_DATE>       { static constexpr auto Code = Lacte::Proto::Params::PROD_DATE;        using Rx = Lacte::Proto::Params::ProdDate; };
-    template<> struct ParamSpec<Lacte::Proto::Params::MCU_UID>         { static constexpr auto Code = Lacte::Proto::Params::MCU_UID;          using Rx = Lacte::Proto::Params::McuUid; };
-    template<> struct ParamSpec<Lacte::Proto::Params::MACHINE_SN>      { static constexpr auto Code = Lacte::Proto::Params::MACHINE_SN;       using Rx = Lacte::Proto::Params::MachineSn; };
-    template<> struct ParamSpec<Lacte::Proto::Params::ACTIVATION_TIME> { static constexpr auto Code = Lacte::Proto::Params::ACTIVATION_TIME;  using Rx = Lacte::Proto::Params::ActivationTime; };
-    template<> struct ParamSpec<Lacte::Proto::Params::DRINK_COUNTER>   { static constexpr auto Code = Lacte::Proto::Params::DRINK_COUNTER;    using Rx = Lacte::Proto::Params::DrinkCounter; };
-    template<> struct ParamSpec<Lacte::Proto::Params::TIME_COUNTER>    { static constexpr auto Code = Lacte::Proto::Params::TIME_COUNTER;     using Rx = Lacte::Proto::Params::TimeCounter; };
-
-    static inline std::istream& operator>>(std::istream& is, Lacte::Proto::Params::numbers& num) {
-        int n;
+    static inline std::istream& operator>>(std::istream& is, Params& num) {
+        size_t n;
         is >> n;
-        if (n < 0 || n > Lacte::Proto::Params::numbers::TIME_COUNTER) {
+        if (n < 0 || n > (size_t)Params::TIME_COUNTER) {
             is.setstate(std::ios::failbit);
         } else {
-            num = static_cast<Lacte::Proto::Params::numbers>(n);
+            num = static_cast<Params>(n);
         }
         return is;
     }
-
     inline void print_bytes(std::ostream& os, const uint8_t* data, std::size_t n) {
         if (!data || n == 0) return;
 
@@ -350,43 +275,42 @@ class ParamProtocol : public proto::ProtocolEndpoint<
         os.copyfmt(old);              // восстановить формат
         os << std::endl;
     }
-
-    inline std::ostream& operator<<(std::ostream& os, const Params::MagicWord& v) {
+    inline std::ostream& operator<<(std::ostream& os, const MagicWord& v) {
         os << "\nMagicWord: ";
         print_bytes(os, v.data, sizeof v.data);
         return os;
     }
-    inline std::ostream& operator<<(std::ostream& os, const Params::LacteSn& v) {
+    inline std::ostream& operator<<(std::ostream& os, const LacteSn& v) {
         os << "\nLacteSn: ";
         print_bytes(os, v.data, sizeof v.data);
         return os;
     }
-    inline std::ostream& operator<<(std::ostream& os, const Params::ProdDate& v) {
+    inline std::ostream& operator<<(std::ostream& os, const ProdDate& v) {
         os << "\nProdDate: ";
         print_bytes(os, v.data, sizeof v.data);
         return os;
     }
-    inline std::ostream& operator<<(std::ostream& os, const Params::McuUid& v) {
+    inline std::ostream& operator<<(std::ostream& os, const McuUid& v) {
         os << "\nMcuUid: ";
         print_bytes(os, v.data, sizeof v.data);
         return os;
     }
-    inline std::ostream& operator<<(std::ostream& os, const Params::MachineSn& v) {
+    inline std::ostream& operator<<(std::ostream& os, const MachineSn& v) {
         os << "\nMachineSn: ";
         print_bytes(os, v.data, sizeof v.data);
         return os;
     }
-    inline std::ostream& operator<<(std::ostream& os, const Params::ActivationTime& v) {
+    inline std::ostream& operator<<(std::ostream& os, const ActivationTime& v) {
         os << "\nActivationTime: ";
         print_bytes(os, v.data, sizeof v.data);
         return os;
     }
-    inline std::ostream& operator<<(std::ostream& os, const Params::DrinkCounter& v) {
+    inline std::ostream& operator<<(std::ostream& os, const DrinkCounter& v) {
         os << "\nDrinkCounter: ";
         print_bytes(os, v.data, sizeof v.data);
         return os;
     }
-    inline std::ostream& operator<<(std::ostream& os, const Params::TimeCounter& v) {
+    inline std::ostream& operator<<(std::ostream& os, const TimeCounter& v) {
         os << "\nTimeCounter: ";
         print_bytes(os, v.data, sizeof v.data);
         return os;

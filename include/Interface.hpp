@@ -17,7 +17,7 @@ namespace proto::interface{
 
     class IInterface {
     public:
-        explicit IInterface(const char *name){};
+        explicit IInterface(const char *name):name_(name){};
         virtual bool Write(Span<uint8_t> buffer, std::chrono::milliseconds timeout = 1s) = 0;
 
         virtual bool IsOpen() = 0;
@@ -30,6 +30,7 @@ namespace proto::interface{
         }
 
     protected:
+        std::string name_;
         std::vector<std::weak_ptr<CallbackType>> callbacks_;
     private:
         virtual int Read(uint8_t *buffer, size_t count) = 0;

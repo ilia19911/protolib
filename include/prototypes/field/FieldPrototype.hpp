@@ -43,6 +43,7 @@ namespace proto {
      */
     struct EmptyDataType {
         bool operator==(const EmptyDataType& other) const{
+            (void)other;
             return true;
         }
 
@@ -149,16 +150,16 @@ namespace proto {
       template<class TT>
       static constexpr bool is_std_vector_v = is_std_vector<TT>::value;
 
+
+        using Elem    = std::remove_pointer_t<T>;        // например, const unsigned char
+        using ElemVal = std::remove_const_t<Elem>;          // unsigned char
 // ---- ваш тип возвращаемого значения ----
 // если поле-указатель (T = X*), вернуть std::vector<X>, иначе — T
       using CopyType = std::conditional_t<
           std::is_pointer_v<T>,
-          std::vector<std::remove_pointer_t<T>>,
+          std::vector<ElemVal>,
           T
       >;
-
-      using Elem = std::remove_pointer_t<T>;
-
 
         [[nodiscard]] CopyType GetCopy() const {
           if constexpr (is_std_vector_v<CopyType>) {
@@ -309,7 +310,7 @@ namespace proto {
          */
         virtual void Set(const void* value) {
             if constexpr ((FLAGS & FieldFlags::REVERSE) != FieldFlags::NOTHING) {
-                for (int i = 0; i < GetSize(); i++) {
+                for (int i = 0; i < (int)GetSize(); i++) {
                     (BASE + offset_)[i] = ((uint8_t*)value)[GetSize() - 1 - i];
                 }
             } else {

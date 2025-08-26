@@ -16,7 +16,7 @@ endif()
 # Turn on strict warnings globally for GCC/Clang (C and C++)
 option(STRICT_WARNINGS "Enable strict warnings and treat them as errors" ON)
 
-
+add_compile_options(-Werror -Wextra)
 add_subdirectory(include/prototypes)
 add_subdirectory(libraries)
 add_subdirectory(protocols)

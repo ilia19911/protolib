@@ -33,9 +33,11 @@
 #include <mutex>
 #include <condition_variable>
 #include <variant>
+#include <thread>
 
 #include "prototypes/container/RxContainer.hpp"
 #include "prototypes/container/TxContainer.hpp"
+#include "NamedTuple.hpp"
 
 namespace proto{
 
@@ -63,6 +65,7 @@ namespace proto{
         /** @brief TX container type for outbound protocol frames. */
         using TxCont = proto::TxContainer<TxFields, Crc>;
         using ReceiveType = typename RxCont::ReturnType;
+        using RxFieldsSnapshot = typename RxCont::NamedReturnTuple;
 
         /**
          * @brief Construct endpoint and install a permanent RX callback that snapshots the last frame's type code.
@@ -75,6 +78,33 @@ namespace proto{
             // NOTE: We intentionally do NOT materialize a variant for DATA_FIELD here,
             // to avoid duplicate-type variant instantiations (e.g., multiple uint8_t* PacketInfo).
             rx_delegate_ = rx.AddReceiveCallback(rx_callback);
+            deque_thread_ = std::thread([this]{
+                std::unique_lock<std::mutex> lock(queue_mutex_);
+                while (true) {
+                    queue_cv_.wait(lock, [this]{
+                        return !running_ || !rx_queue_.empty();
+                    });
+                    if (!running_) break;
+                    auto val = std::move(rx_queue_.front());
+                    // вызываем без мьютекса
+                    lock.unlock();
+                    if (user_callback_) {
+                        user_callback_(std::move(val));
+                        rx_queue_.pop_front();
+                    }
+                    lock.lock();
+                }
+            });
+        }
+        ~ProtocolEndpoint(){
+            {
+                std::lock_guard<std::mutex> lk(queue_mutex_);
+                running_ = false;          // если не atomic — тем более делать под мьютексом
+            }
+            queue_cv_.notify_all();
+
+            if (deque_thread_.joinable())
+                deque_thread_.join();
         }
 
         void SetDebug(bool v){ rx.SetDebug(v); tx.SetDebug(v); }
@@ -97,13 +127,12 @@ namespace proto{
         }
         static constexpr std::chrono::duration receive_timeout_ = std::chrono::milliseconds{1000};
         template<typename... Infos>
-        ReceiveType Request( Infos&&... infos) {
+        RxFieldsSnapshot Request( Infos&&... infos) {
             received_ = false;
 
-            ReceiveType result{};
-            auto l = [&](auto& container){
-                auto& data_field = rx.template Get<proto::FieldName::DATA_FIELD>();
-                result = data_field.GetCopy();
+            RxFieldsSnapshot result{};
+            auto l = [&](RxFieldsSnapshot&& snapshot){
+                result = snapshot;
             };
             inflight_cb_ = l;
             tx.SendPacket(std::forward<Infos>(infos)...);
@@ -113,6 +142,15 @@ namespace proto{
             return result;
         }
 
+        template<typename... Infos>
+        size_t Send( Infos&&... infos) {
+            return tx.SendPacket(std::forward<Infos>(infos)...);
+        }
+
+        void SetReceiveCallback(std::function<void(RxFieldsSnapshot&&)> user_callback){
+            user_callback_ = user_callback;
+        }
+
         RxCont rx;
         TxCont tx;
 
@@ -120,33 +158,48 @@ namespace proto{
 
 
         // sync
+        std::atomic<bool> running_{true};
+        std::function<void(RxFieldsSnapshot&&)> user_callback_;
+        std::thread deque_thread_;
         std::mutex m_;
+        std::mutex queue_mutex_;
         std::condition_variable cv_;
-        uint64_t seq_ = 0;
+        std::condition_variable queue_cv_;
         bool received_{false};
+        std::deque<RxFieldsSnapshot> rx_queue_;
+        proto::interface::Delegate rx_if_cb_{};
+        size_t max_deque_size_ = 100;
 
         // One-shot extractor installed by wait_once to pull typed DATA_FIELD while Rx buffer is valid.
-        std::function<void(RxCont&)> inflight_cb_{};
-
+        std::function<void(RxFieldsSnapshot&&)> inflight_cb_{};
 
         // Stored delegates to honor [[nodiscard]] on AddReceiveCallback
         typename RxCont::Delegate rx_delegate_{};
         typename RxCont::CallbackType rx_callback{[this](auto& container){
             if(container.IsDebug()){
-                std::cout << " \n\n Packet from board is received!! " <<std::endl;
+                std::cout << " \n\n Packet is received!!\n" <<std::endl;
                 container.for_each_type([&](auto& field){
                     field.Print();
                 });
             }
+            if(inflight_cb_){
+                inflight_cb_(container.GetNamedCopies());
+                inflight_cb_ = nullptr;
+            }
+            else{
+                std::unique_lock<std::mutex> lock(queue_mutex_);
+                rx_queue_.emplace_back(container.GetNamedCopies());
+                if(rx_queue_.size() > max_deque_size_){
+                    //TODO должна быть запись в лог что были потеряны данные
+                    rx_queue_.pop_front();
+                }
+                lock.unlock();
+                queue_cv_.notify_all();
+            }
             received_ = true;
             cv_.notify_all();
-
-            if(inflight_cb_){
-                inflight_cb_(container);
-            }
-            inflight_cb_ = nullptr;
         }};
-        proto::interface::Delegate rx_if_cb_{};
+
     };
 
 }
