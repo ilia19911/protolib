@@ -34,6 +34,7 @@
 #include <condition_variable>
 #include <variant>
 #include <thread>
+#include <deque>
 
 #include "prototypes/container/RxContainer.hpp"
 #include "prototypes/container/TxContainer.hpp"

@@ -251,7 +251,7 @@ namespace proto::lacte {
     static inline std::istream& operator>>(std::istream& is, Params& num) {
         size_t n;
         is >> n;
-        if (n < 0 || n > (size_t)Params::TIME_COUNTER) {
+        if (n > (size_t)Params::TIME_COUNTER) {
             is.setstate(std::ios::failbit);
         } else {
             num = static_cast<Params>(n);
