@@ -101,31 +101,31 @@ namespace proto
             auto info_tuple = std::make_tuple(std::forward<Infos>(infos)...);
             using InfoTuple = decltype(info_tuple);
 
+
             if constexpr (TxContainer<Fields>::template HasField<FieldName::DATA_FIELD>() &&
                           TxContainer<Fields>::template HasField<FieldName::TYPE_FIELD>()){
                 auto& data_field = this->template Get<FieldName::DATA_FIELD>();
+
+                if constexpr ( FieldInfoHasName<FieldName::TYPE_FIELD, InfoTuple>()){
+                    auto &type_info = GetFieldInfoByName< FieldName::TYPE_FIELD>(info_tuple);
+                    data_field.SetId(*type_info.data);
+                }
+
                 if constexpr ( FieldInfoHasName<FieldName::DATA_FIELD, InfoTuple>() && is_data_field_prototype<decltype(data_field)>::value) {
                     auto &type_field = this->template Get<FieldName::TYPE_FIELD>();
                     auto &data_info = GetFieldInfoByName< FieldName::DATA_FIELD>(info_tuple);
                     using DataType = typename std::remove_reference_t<decltype(data_info)>::Type;
-
-                    if constexpr ( FieldInfoHasName<FieldName::TYPE_FIELD, InfoTuple>()){
-                        auto &type_info = GetFieldInfoByName< FieldName::TYPE_FIELD>(info_tuple);
-                        data_field.SetId(*type_info.data);
-                        return ConstructPacket(std::forward<Infos>(infos)...);
-                    }
-                    else{
+                    if constexpr (not FieldInfoHasName<FieldName::TYPE_FIELD, InfoTuple>()){
                         int packet_id = data_field.template GetNumber<DataType>();
                         data_field.SetId(packet_id);
                         data_field.template SetSize<DataType>();
                         auto type_info = MakeFieldInfo<proto::FieldName::TYPE_FIELD>(&packet_id);
                         auto expanded_tuple = std::tuple_cat(info_tuple, std::make_tuple(type_info));
-                        return ConstructPacketFromTuple(expanded_tuple);}
+                        return ConstructPacketFromTuple(expanded_tuple);
                     }
+                }
             }
-            else{
-                return ConstructPacket(std::forward<Infos>(infos)...);
-            }
+            return ConstructPacket(std::forward<Infos>(infos)...);
         }
         /**
          * @brief Reset the internal state of the container and its fields.
@@ -254,7 +254,7 @@ namespace proto
             auto& len_field = container.template Get<FieldName::LEN_FIELD>();
             if constexpr (TxContainer<Fields>::template HasField<FieldName::ALEN_FIELD>()){
                 auto& alen_field = container.template Get<FieldName::ALEN_FIELD>();
-                alen_field.Set(~(*len_field.GetData()));
+                alen_field.Set(~(*len_field.GetPtr()));
             }
             return MatchStatus::MATCH;
         }
@@ -275,7 +275,7 @@ namespace proto
             container.for_each_type([&](auto& field){
                 using FieldType = std::remove_reference_t<decltype(field)>;
                 if constexpr (HasFlag(FieldType::flags_, FieldFlags::IS_IN_CRC)) {
-                    auto *data = field.GetData();
+                    auto *data = field.GetPtr();
                     size_t size = field.GetSize();
                     crc = container.crc_.Append(crc, {(uint8_t*)data, size});
                 }

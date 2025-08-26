@@ -48,8 +48,8 @@ protected:
     using SimpleProto  = proto::test::SympleProtocol<rx_simple_, tx_simple_>;
     using ComplexProto = proto::test::ComplexProtocol<rx_complex_, tx_complex_>;
 
-    SimpleProto  simple_{};   // provides simple_.rx() / simple_.tx()
-    ComplexProto complex_{};  // provides complex_.rx() / complex_.tx()
+    SimpleProto  simple_;   // provides simple_.rx() / simple_.tx()
+    ComplexProto complex_;  // provides complex_.rx() / complex_.tx()
 
     bool received_ = false;   // track if callback invoked
     // Holds the last DATA_FIELD variant captured from the receive callback
@@ -88,7 +88,7 @@ private:
  * Verify that the field matchers are bound to the expected RxContainer methods.
  */
 TEST_F(RxContainerSuite, Matchers_AreBound) {
-    auto& rx = simple_.rx();
+    auto& rx = simple_.rx;
     EXPECT_EQ(rx.Get<FieldName::LEN_FIELD>().TestMatcher(),  std::remove_reference_t<decltype(rx)>::SetDataLen);
     EXPECT_EQ(rx.Get<FieldName::ALEN_FIELD>().TestMatcher(), std::remove_reference_t<decltype(rx)>::CheckAlen);
     EXPECT_EQ(rx.Get<FieldName::CRC_FIELD>().TestMatcher(),  std::remove_reference_t<decltype(rx)>::CheckCrc);
@@ -103,8 +103,8 @@ TEST_F(RxContainerSuite, Matchers_AreBound) {
  * to the expected positions (ID at 0, LEN at 3, ALEN at 4, DATA at 5, ...).
  */
 TEST_F(RxContainerSuite, Reset_OffsetsGoToZero_ThenRebuiltOnFill) {
-    auto& rx = simple_.rx();
-    auto& tx = simple_.tx();
+    auto& rx = simple_.rx;
+    auto& tx = simple_.tx;
 
     using RxT = std::remove_reference_t<decltype(rx)>;
     auto recv = rx.AddReceiveCallback([&](RxT&){ received_ = true; });
@@ -140,8 +140,8 @@ TEST_F(RxContainerSuite, Reset_OffsetsGoToZero_ThenRebuiltOnFill) {
  * offsets progress exactly by the number of bytes consumed.
  */
 TEST_F(RxContainerSuite, Fill_OffsetsProgressOnSameBuffer) {
-    auto& rx = simple_.rx();
-    auto& tx = simple_.tx();
+    auto& rx = simple_.rx;
+    auto& tx = simple_.tx;
 
     using RxT = std::remove_reference_t<decltype(rx)>;
     size_t callback_count = 0;
@@ -149,7 +149,7 @@ TEST_F(RxContainerSuite, Fill_OffsetsProgressOnSameBuffer) {
     auto recv = rx.AddReceiveCallback([&](RxT& c){
         ++callback_count;
         EXPECT_EQ(std::memcmp(
-                          (const uint8_t*)c.template Get<FieldName::DATA_FIELD>().GetData(),
+                          (const uint8_t*)c.template Get<FieldName::DATA_FIELD>().GetPtr(),
                                   (const uint8_t*)&kTestData1,
                                   sizeof(kTestData1)),
                   0);
@@ -192,8 +192,8 @@ TEST_F(RxContainerSuite, Fill_OffsetsProgressOnSameBuffer) {
  * callable for a correct packet.
  */
 TEST_F(RxContainerSuite, Debug_MismatchPathsAreCovered) {
-    auto& rx = simple_.rx();
-    auto& tx = simple_.tx();
+    auto& rx = simple_.rx;
+    auto& tx = simple_.tx;
 
     using RxT = std::remove_reference_t<decltype(rx)>;
     auto recv = rx.AddReceiveCallback([&](RxT&){ received_ = true; });
@@ -261,16 +261,16 @@ TEST_F(RxContainerSuite, Debug_MismatchPathsAreCovered) {
  * and DATA size derived from it).
  */
 TEST_F(RxContainerSuite, Debug_MismatchPathsCovered_ComplexLayout) {
-    auto& rx2 = complex_.rx();
-    auto& tx2 = complex_.tx();
+    auto& rx2 = complex_.rx;
+    auto& tx2 = complex_.tx;
 
     using Rx2T = std::remove_reference_t<decltype(rx2)>;
-    auto last_variant_ = rx2.template Get<FieldName::DATA_FIELD>().GetVariant();
+    auto last_variant_ = rx2.template Get<FieldName::DATA_FIELD>().GetCopy();
     auto recv2 = rx2.AddReceiveCallback([&](Rx2T& c){
         received_ = true;
         // Save the variant from DATA field inside the callback because
         // the container state is reset after the handler returns.
-        last_variant_ = c.template Get<FieldName::DATA_FIELD>().GetVariant();
+        last_variant_ = c.template Get<FieldName::DATA_FIELD>().GetCopy();
     });
     rx2.SetDebug(true);
 
@@ -358,8 +358,8 @@ TEST_F(RxContainerSuite, Debug_MismatchPathsCovered_ComplexLayout) {
  * кадр в ожидаемом «реверснутом» порядке.
  */
 TEST_F(RxContainerSuite, Complex_CRCReverse_ByteSwapBreaksPacket) {
-    auto& rx2 = complex_.rx();
-    auto& tx2 = complex_.tx();
+    auto& rx2 = complex_.rx;
+    auto& tx2 = complex_.tx;
 
     using Rx2T = std::remove_reference_t<decltype(rx2)>;
     bool got = false;

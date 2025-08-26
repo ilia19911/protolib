@@ -39,20 +39,20 @@ protected:
     static auto& tx_simple()  {
         static SimpleProto p; // lives for whole test run
         // friend accessors are defined in Prototypes.hpp test helpers
-        return p.tx();
+        return p.tx;
     }
     static auto& tx_complex() {
         static ComplexProto p;
-        return p.tx();
+        return p.tx;
     }
 
     static auto& rx_simple() {
         static SimpleProtoMixed p; // separate instance
-        return p.rx();
+        return p.rx;
     }
     static auto& rx_complex() {
         static ComplexProtoMixed p;
-        return p.rx();
+        return p.rx;
     }
 
     // Helper: feed a built TX frame into RX in field order and collect a callback
@@ -71,7 +71,7 @@ protected:
 
         // Feed RX in protocol field order, exactly the bytes each field owns.
         tx.for_each_type([&](auto& fld){
-            const uint8_t* p   = reinterpret_cast<const uint8_t*>(fld.GetData());
+            const uint8_t* p = (uint8_t*)fld.GetPtr();
             Span<uint8_t> chunk(const_cast<uint8_t*>(p), fld.GetSize());
             size_t read = 0;
             rx.Fill(chunk, read);
@@ -107,7 +107,7 @@ TEST_F(TxContainerSuite, Send_SimplePacket) {
 
     // 2) LEN must equal sum of sizes of fields flagged with IS_IN_LEN
     {
-        uint8_t len_val = *tx.Get<FieldName::LEN_FIELD>().GetData();
+        uint8_t len_val = *tx.Get<FieldName::LEN_FIELD>().GetPtr();
         size_t expect_len = 0;
         tx.for_each_type([&](auto& fld){
             using F = std::decay_t<decltype(fld)>;
@@ -120,14 +120,14 @@ TEST_F(TxContainerSuite, Send_SimplePacket) {
 
     // 3) ALEN must be bitwise negation of LEN (library contract used in tests)
     {
-        uint8_t len_val  = *tx.Get<FieldName::LEN_FIELD>().GetData();
-        uint8_t alen_val = *tx.Get<FieldName::ALEN_FIELD>().GetData();
+        uint8_t len_val  = *tx.Get<FieldName::LEN_FIELD>().GetPtr();
+        uint8_t alen_val = *tx.Get<FieldName::ALEN_FIELD>().GetPtr();
         EXPECT_EQ(static_cast<uint8_t>(~len_val), alen_val) << "ALEN != ~LEN";
     }
 
     // 4) DATA region must contain payload
     {
-        auto* data_ptr = reinterpret_cast<const uint8_t*>(tx.Get<FieldName::DATA_FIELD>().GetData());
+        auto* data_ptr = reinterpret_cast<const uint8_t*>(tx.Get<FieldName::DATA_FIELD>().GetPtr());
         EXPECT_EQ(std::memcmp(data_ptr, &payload, sizeof(payload)), 0) << "DATA mismatch";
     }
 
@@ -175,17 +175,17 @@ TEST_F(TxContainerSuite, Send_ComplexPacket_TypeAndData) {
         ASSERT_GT(n, 0u) << "SendPacket failed for type " << int(t);
 
         // Sanity: TYPE field must be written
-        EXPECT_EQ(*tx.Get<FieldName::TYPE_FIELD>().GetData(), t);
+        EXPECT_EQ(*tx.Get<FieldName::TYPE_FIELD>().GetPtr(), t);
 
         // LEN/ALEN invariant holds
-        uint8_t len_val  = *tx.Get<FieldName::LEN_FIELD>().GetData();
-        uint8_t alen_val = *tx.Get<FieldName::ALEN_FIELD>().GetData();
+        uint8_t len_val  = *tx.Get<FieldName::LEN_FIELD>().GetPtr();
+        uint8_t alen_val = *tx.Get<FieldName::ALEN_FIELD>().GetPtr();
         EXPECT_EQ(static_cast<uint8_t>(~len_val), alen_val);
 
         // Round-trip into RX and verify the variant matches the type id we sent
         auto& rx = rx_complex();
         bool ok = RoundtripToRx(rx, tx, [&](std::decay_t<decltype(rx)>& cont){
-            auto v = cont.template Get<FieldName::DATA_FIELD>().GetVariant();
+            auto v = cont.template Get<FieldName::DATA_FIELD>().GetCopy();
             switch (t) {
                 case 1: EXPECT_TRUE(std::holds_alternative<proto::test::dataType>(v)); break;
                 case 2: EXPECT_TRUE(std::holds_alternative<proto::test::dataType2>(v)); break;
@@ -216,7 +216,7 @@ TEST_F(TxContainerSuite, Complex_FrameIsContiguousFromIdBase) {
     // Just verify that each field's pointer lies inside [base, base+n)
     size_t min_off = SIZE_MAX, max_end = 0;
     tx.for_each_type([&](auto& fld){
-        auto* p = reinterpret_cast<const uint8_t*>(fld.GetData());
+        auto* p = (uint8_t*)fld.GetPtr();
         size_t off = static_cast<size_t>(p - base);
         min_off = std::min(min_off, off);
         max_end = std::max(max_end, off + fld.GetSize());

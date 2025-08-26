@@ -9,7 +9,7 @@ uint32_t Crc16Modbus::Append(uint32_t dump, Span<uint8_t> data) {
     (void)dump;
     uint8_t *dataPtr = data.data();
     uint8_t ch;
-    for (auto i = 0; i < data.size(); i++) {
+    for (size_t i = 0; i < data.size(); i++) {
         ch = *dataPtr++;
         crc_ = crctalbeabs[(ch ^ crc_) & 15] ^ (crc_ >> 4);
         crc_ = crctalbeabs[((ch >> 4) ^ crc_) & 15] ^ (crc_ >> 4);

@@ -3,6 +3,7 @@
 #include "Prototypes.hpp"
 #include "Echo.hpp"
 #include <cstring>
+#include <variant>
 
 namespace {
 using namespace proto;
@@ -14,175 +15,190 @@ static uint8_t tx_simple_[256]{};
 static uint8_t rx_complex_[256]{};
 static uint8_t tx_complex_[256]{};
 
-// Simple layout aliases and containers
-using SimpleFieldsRx    = SympleFields<rx_simple_>;
-using SimpleFieldsTx    = SympleFields<tx_simple_>;
-using proto_fields_rx    = typename SimpleFieldsRx::proto_fields;
-using proto_fields_tx    = typename SimpleFieldsTx::proto_fields;
-static RxContainer<proto_fields_rx> rxContainer{};
-static TxContainer<proto_fields_tx> txContainer{};
-
-// Complex layout aliases and containers
-using ComplexFieldsRxT  = ComplexFields<rx_complex_>;
-using ComplexFieldsTxT  = ComplexFields<tx_complex_>;
-
-using proto_fields2Rx   = typename ComplexFieldsRxT::proto_fields;
-using proto_fields2Tx   = typename ComplexFieldsTxT::proto_fields;
-static RxContainer<proto_fields2Rx> rxContainer2{};
-static TxContainer<proto_fields2Tx> txContainer2{};
 
 // Test payloads
 static proto::test::dataType  testType{1,2,3,4.f,2.718281828459045};
 static proto::test::dataType2 testType2{}; // default-inited
 
-// Protocol ID/prefix bytes for noise synthesis
-static constexpr const uint8_t* kPref1 = SimpleFieldsRx::prefix;     // 3-byte prefix
-static constexpr const uint8_t* kPref2 = ComplexFieldsTxT ::prefix;   // 3-byte prefix
-} // namespace
-
+// Helper: detect std::variant at compile time (C++17)
+template<class T> struct is_std_variant : std::false_type {};
+template<class... Ts> struct is_std_variant<std::variant<Ts...>> : std::true_type {};
+template<class T>
+inline constexpr bool is_std_variant_v = is_std_variant<std::decay_t<T>>::value;
 
 using namespace proto::test;
 using namespace std::chrono_literals;
 
-static bool received = false;
-
 TEST(PingPongContainerTest, SanyCaseType1){
+    using namespace proto;
+    using namespace proto::test;
 
-    auto transmitHandler = [](Span<uint8_t> span, size_t &read){
-        rxContainer.Fill(span, read);
-    };
-    auto receiveHandler = [](auto &fields){
-        received = true;
-        auto &data = fields.template Get<proto::FieldName::DATA_FIELD>();
-        EXPECT_EQ(testType, *data.GetData());
-    };
-
+    SympleProtocol<rx_simple_, tx_simple_> protocol;
     proto::interface::echoInterface interface{};
-    auto d = interface.AddReceiveCallback(transmitHandler);
     interface.Open();
-    txContainer.SetInterface(interface);
-    auto cd = rxContainer.AddReceiveCallback(receiveHandler);
+    protocol.SetInterfaces(interface, interface);
 
-    received = false;
-    txContainer.SendPacket(
-            proto::MakeFieldInfo< proto::FieldName::DATA_FIELD>(&testType)
-    );
+    // Helper to assert equality for either pointer-return or variant-return
+    auto assertEqual = [](auto&& result, const dataType& expected) {
+        using R = std::decay_t<decltype(result)>;
+        if constexpr (is_std_variant_v<R>) {
+            bool matched = false;
+            std::visit([&](auto&& alt){
+                using A = std::decay_t<decltype(alt)>;
+                if constexpr (std::is_same_v<A, dataType>) {
+                    EXPECT_EQ(expected, alt);
+                    matched = true;
+                } else if constexpr (std::is_same_v<A, std::monostate>) {
+                    // no payload
+                } else {
+                    // Different alternative — not expected for this test
+                }
+            }, result);
+            EXPECT_TRUE(matched) << "Variant did not contain dataType";
+        } else {
+//            ASSERT_NE(result, nullptr);
+            EXPECT_EQ(expected, result);
+        }
+    };
 
-    EXPECT_TRUE(received);
+    // 1) First request/response
+    auto r1 = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType));
+    auto r1_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r1);
+    assertEqual(r1_data_field, testType);
 
-    received = false;
+    // 2) Change payload and request again
     testType.d = 0.234542;
-    txContainer.SendPacket(
-            proto::MakeFieldInfo< proto::FieldName::DATA_FIELD>(&testType)
-    );
-    EXPECT_TRUE(received);
-
+    auto r2 = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType));
+    auto r2_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r2);
+    assertEqual(r2_data_field, testType);
 }
-
 TEST(PingPongContainerTest, NoiseType1){
-    received = false;
-    uint8_t noise[] = {4,2,6,7,34,67,44,255,255,255, kPref1[0], kPref1[1]};
-    auto transmitHandler = [](Span<uint8_t> span, size_t &read){
-        rxContainer.Fill(span, read);
-    };
-    auto receiveHandler = [](decltype(rxContainer)& fields){
-        received = true;
-        auto &data = fields.template Get<proto::FieldName::DATA_FIELD>();
-        EXPECT_EQ(testType, *data.GetData());
-    };
-//    auto transmitHandlerPtr = proto::interface::CreateDelegate(transmitHandler);
-//    auto receiveHandlerPtr = decltype(rxContainer)::CreateDelegate(receiveHandler);
+    using namespace proto;
+    using namespace proto::test;
+
+    SympleProtocol<rx_simple_, tx_simple_> protocol;
     proto::interface::echoInterface interface{};
     interface.Open();
-    auto d = interface.AddReceiveCallback(transmitHandler);
-    txContainer.SetInterface(interface);
-    auto cd = rxContainer.AddReceiveCallback(receiveHandler);
+    protocol.SetInterfaces(interface, interface);
+
+    // helper from above: assertEqual(result, expected)
+    auto assertEqual = [](auto&& result, const auto& expected) {
+        using R = std::decay_t<decltype(result)>;
+        if constexpr (is_std_variant_v<R>) {
+            bool matched = false;
+            std::visit([&](auto&& alt){
+                using A = std::decay_t<decltype(alt)>;
+                if constexpr (std::is_same_v<A, std::decay_t<decltype(expected)>>) {
+                    EXPECT_EQ(expected, alt);
+                    matched = true;
+                }
+            }, result);
+            EXPECT_TRUE(matched) << "Variant did not contain expected type";
+        } else {
+//            ASSERT_NE(result, nullptr);
+            EXPECT_EQ(expected, result);
+        }
+    };
 
     auto task = [&](auto &noiseData){
         interface.Write(Span<uint8_t>{noiseData, sizeof(noiseData)}, 1s);
-        received = false;
-
-        txContainer.SendPacket(
-                proto::MakeFieldInfo< proto::FieldName::DATA_FIELD>(&testType)
-        );
-
-        EXPECT_TRUE(received);
+        auto r = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType));
+        auto r_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r);
+        assertEqual(r_data_field, testType);
     };
+
+    // 1) random noise before a valid request
+    uint8_t noise[] = {4,2,6,7,34,67,44,255,255,255, 0xAA, 0xBB};
     task(noise);
+
+    // 2) wrong length header noise, then valid request
     testType.f = 322;
-    uint8_t wrong_len_noise[] = {kPref1[0], kPref1[1], kPref1[2],200,200};
+    uint8_t wrong_len_noise[] = {0xAA, 0xBB, 0xCC, 200, 200};
     task(wrong_len_noise);
 }
 
 
 TEST(PingPongContainerTest, SanyCaseType2){
+    using namespace proto;
+    using namespace proto::test;
 
-    auto transmitHandler = [](Span<uint8_t> span, size_t &read){
-        rxContainer2.Fill(span, read);
-    };
-    auto receiveHandler = [](decltype(rxContainer2)& fields){
-        received = true;
-        auto &data_field = fields.template Get<proto::FieldName::DATA_FIELD>();
-        auto *data = data_field.GetIf<dataType2>();
-        EXPECT_EQ(testType2, *data);
-    };
-//    auto transmitHandlerPtr = proto::interface::CreateDelegate(transmitHandler);
+    ComplexProtocol<rx_complex_, tx_complex_> protocol;
     proto::interface::echoInterface interface{};
     interface.Open();
-    auto d = interface.AddReceiveCallback(transmitHandler);
-    txContainer2.SetInterface(interface);
-    //rxContainer2.SetDebug(true);
+    protocol.SetInterfaces(interface, interface);
 
-    auto cd = rxContainer2.AddReceiveCallback(receiveHandler);
-    received = false;
-    txContainer2.SendPacket(
-            proto::MakeFieldInfo< proto::FieldName::DATA_FIELD>(&testType2)
-    );
+    auto assertEqual = [](auto&& result, const auto& expected) {
+        using R = std::decay_t<decltype(result)>;
+        if constexpr (is_std_variant_v<R>) {
+            bool matched = false;
+            std::visit([&](auto&& alt){
+                using A = std::decay_t<decltype(alt)>;
+                if constexpr (std::is_same_v<A, std::decay_t<decltype(expected)>>) {
+                    EXPECT_EQ(expected, alt);
+                    matched = true;
+                }
+            }, result);
+            EXPECT_TRUE(matched) << "Variant did not contain expected type";
+        } else {
+//            ASSERT_NE(result, nullptr);
+            EXPECT_EQ(expected, result);
+        }
+    };
 
-    EXPECT_TRUE(received);
+    // First request with default-initialized testType2
+    auto r1 = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType2));
+        auto r1_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r1);
+    assertEqual(r1_data_field, testType2);
 
-    received = false;
-    testType.d = 0.234542;
-    txContainer2.SendPacket(
-            proto::MakeFieldInfo< proto::FieldName::DATA_FIELD>(&testType2)
-    );
-    EXPECT_TRUE(received);
-
+    // Second request after modifying a field (if any)
+    testType.d = 0.234542; // keep some deterministic change in other payload type
+    auto r2 = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType2));
+        auto r2_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r2);
+    assertEqual(r2_data_field, testType2);
 }
 
 TEST(PingPongContainerTest, NoiseType2){
-    received = false;
-//    rxContainer2.SetDebug(true);
-    uint8_t noise[] = {4,2,6,7,34,67,44,255,255,255, kPref1[0], kPref1[1]};
-    auto transmitHandler = [](Span<uint8_t> span, size_t &read){
-        rxContainer2.Fill(span, read);
-    };
-    auto receiveHandler = [](decltype(rxContainer2)& fields){
-        received = true;
-        auto &data_field = fields.template Get<proto::FieldName::DATA_FIELD>();
-        auto *data = data_field.GetIf<dataType2>();
-        EXPECT_EQ(testType2, *data);
-    };
-//    auto transmitHandlerPtr = proto::interface::CreateDelegate(transmitHandler);
+    using namespace proto;
+    using namespace proto::test;
+
+    ComplexProtocol<rx_complex_, tx_complex_> protocol;
     proto::interface::echoInterface interface{};
     interface.Open();
-    auto d = interface.AddReceiveCallback(transmitHandler);
-    txContainer2.SetInterface(interface);
-    auto cd = rxContainer2.AddReceiveCallback(receiveHandler);
+    protocol.SetInterfaces(interface, interface);
+
+    auto assertEqual = [](auto&& result, const auto& expected) {
+        using R = std::decay_t<decltype(result)>;
+        if constexpr (is_std_variant_v<R>) {
+            bool matched = false;
+            std::visit([&](auto&& alt){
+                using A = std::decay_t<decltype(alt)>;
+                if constexpr (std::is_same_v<A, std::decay_t<decltype(expected)>>) {
+                    EXPECT_EQ(expected, alt);
+                    matched = true;
+                }
+            }, result);
+            EXPECT_TRUE(matched) << "Variant did not contain expected type";
+        } else {
+//            ASSERT_NE(result, nullptr);
+            EXPECT_EQ(expected, result);
+        }
+    };
 
     auto task = [&](auto &noiseData){
-        interface.Write({noiseData, sizeof(noiseData)}, 1s);
-        received = false;
+        interface.Write(Span<uint8_t>{noiseData, sizeof(noiseData)}, 1s);
+        auto r = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType2));
+        auto r_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r);
 
-        txContainer2.SendPacket(
-                proto::MakeFieldInfo< proto::FieldName::DATA_FIELD>(&testType2)
-        );
-
-        EXPECT_TRUE(received);
+        assertEqual(r_data_field, testType2);
     };
+
+    // Random garbage before frame
+    uint8_t noise[] = {4,2,6,7,34,67,44,255,255,255, 0xAA, 0xBB};
     task(noise);
+
+    // Wrong LEN then valid request
     testType.f = 322;
-    uint8_t wrong_len_noise[] = {kPref1[0], kPref1[1], kPref1[2],200,200};
+    uint8_t wrong_len_noise[] = {0xAA, 0xBB, 0xCC, 200, 200};
     task(wrong_len_noise);
 }
 
@@ -193,77 +209,87 @@ TEST(PingPongContainerTest, NoiseType2){
  * the standard diagnostics that contain "Mismatch in CRC field" and the
  * BROKEN PACKET dump markers.
  */
-TEST(PingPongContainerTest, DebugOutput_Type2_CrcMismatch) {
-    using namespace ::testing;
+    TEST(PingPongContainerTest, DebugOutput_Type2_CrcMismatch) {
+        using namespace ::testing;
+        using namespace proto;
+        using namespace proto::test;
 
-    auto transmitHandler = [](Span<uint8_t> span, size_t &read){
-        // Aggregate all parts of one frame and send as a single buffer.
-        // Complex layout always emits exactly 6 parts: ID, LEN, ALEN, TYPE, DATA, CRC.
-        static std::array<uint8_t, 512> frame_buf{};
-        static size_t acc = 0;       // total bytes accumulated for the current frame
-        static int parts = 0;        // number of chunks seen for the current frame
+        // Local Complex RX/TX containers (old-style) just for this CRC debug test
+        using ComplexFieldsRxT  = ComplexFields<rx_complex_>;
+        using ComplexFieldsTxT  = ComplexFields<tx_complex_>;
+        using proto_fields2Rx   = typename ComplexFieldsRxT::proto_fields;
+        using proto_fields2Tx   = typename ComplexFieldsTxT::proto_fields;
 
-        // Append current chunk
-        const size_t n = span.size();
-        ASSERT_LT(acc + n, frame_buf.size());
-        std::memcpy(frame_buf.data() + acc, span.begin(), n);
-        acc   += n;
-        parts += 1;
+        static RxContainer<proto_fields2Rx> rxContainer2{};
+        static TxContainer<proto_fields2Tx> txContainer2{};
 
-        // When the last part (CRC) arrives, corrupt the last byte and deliver the whole frame
-        if (parts == 6) {
-            // Flip the very last byte in the aggregated frame → CRC mismatch
-            if (acc >= 1) {
-                frame_buf[acc - 1] ^= 0x5A;
+        auto transmitHandler = [](Span<uint8_t> span, size_t &read){
+            // Aggregate all parts of one frame and send as a single buffer.
+            // Complex layout emits exactly 6 parts: ID, LEN, ALEN, TYPE, DATA, CRC.
+            static std::array<uint8_t, 512> frame_buf{};
+            static size_t acc = 0;  // total bytes accumulated for the current frame
+            static int parts = 0;   // number of chunks seen for the current frame
+
+            // Append current chunk
+            const size_t n = span.size();
+            ASSERT_LT(acc + n, frame_buf.size());
+            std::memcpy(frame_buf.data() + acc, span.begin(), n);
+            acc   += n;
+            parts += 1;
+
+            // When the last part (CRC) arrives, corrupt the last byte and deliver the whole frame
+            if (parts == 6) {
+                if (acc >= 1) {
+                    frame_buf[acc - 1] ^= 0x5A; // Flip the last byte to break CRC
+                }
+
+                // Feed the entire corrupted frame to RX in a single Fill call
+                Span<uint8_t> full{frame_buf.data(), acc};
+                rxContainer2.Fill(full, read);
+
+                // Reset aggregation state for the next frame
+                acc = 0;
+                parts = 0;
             }
+            // Note: for parts 1..5 we intentionally do NOT forward anything to RX yet.
+        };
 
-            // Feed the entire corrupted frame to RX in a single Fill call
-            Span<uint8_t> full{frame_buf.data(), acc};
-            rxContainer2.Fill(full, read);
+        bool got_callback = false;
+        auto receiveHandler = [&](decltype(rxContainer2)& fields){
+            got_callback = true; // should remain false for deliberately corrupted frame
+            (void)fields;
+        };
 
-            // Reset aggregation state for the next frame
-            acc = 0;
-            parts = 0;
-        }
-        // Note: for parts 1..5 we intentionally do NOT forward anything to RX yet.
-    };
+        proto::interface::echoInterface interface{};
+        interface.Open();
 
-    // We still want to observe that RX tried to parse and delivered a callback
-    // only for valid frames; for a corrupted frame the callback must NOT fire.
-    bool got_callback = false;
-    auto receiveHandler = [&](decltype(rxContainer2)& fields){
-        got_callback = true; // should remain false for deliberately corrupted frame
-        (void)fields;
-    };
+        // Route TX writes through our transmit handler; we will forward to RX ourselves
+        auto d  = interface.AddReceiveCallback(transmitHandler);
 
-//    auto transmitHandlerPtr = proto::interface::CreateDelegate(transmitHandler);
+        // Wire TX/RX to the same interface
+        txContainer2.SetInterface(interface);
+        auto cd = rxContainer2.AddReceiveCallback(receiveHandler);
 
-    proto::interface::echoInterface interface{};
-    interface.Open();
-    auto d = interface.AddReceiveCallback(transmitHandler);
+        // Turn on RX debug to make it print diagnostics to stdout
+        rxContainer2.SetDebug(true);
 
-    // Wire TX/RX
-    txContainer2.SetInterface(interface);
-    auto cd = rxContainer2.AddReceiveCallback(receiveHandler);
+        // Capture stdout during a single send of a valid payload that we corrupt in-flight
+        ::testing::internal::CaptureStdout();
+        (void)txContainer2.SendPacket(
+                proto::MakeFieldInfo< proto::FieldName::DATA_FIELD>(&testType2)
+        );
+        std::string out = ::testing::internal::GetCapturedStdout();
 
-    // Turn on RX debug to make it print diagnostics to stdout
-    rxContainer2.SetDebug(true);
+        // The RX should not report a successful callback for a corrupted frame
+        EXPECT_FALSE(got_callback) << "RX callback must not fire on CRC-mismatched frame";
 
-    // Capture stdout during a single send of a valid payload that we corrupt in-flight
-    ::testing::internal::CaptureStdout();
-    (void)txContainer2.SendPacket(
-        proto::MakeFieldInfo< proto::FieldName::DATA_FIELD>(&testType2)
-    );
-    std::string out = ::testing::internal::GetCapturedStdout();
+        // And it should log the expected debug markers
+        EXPECT_THAT(out, HasSubstr("Mismatch in CRC field"));
+        EXPECT_THAT(out, HasSubstr("BROKEN PACKET START"));
+        EXPECT_THAT(out, HasSubstr("BROKEN PACKET STOP"));
 
-    // The RX should not report a successful callback for a corrupted frame
-    EXPECT_FALSE(got_callback) << "RX callback must not fire on CRC-mismatched frame";
-
-    // And it should log the expected debug markers
-    EXPECT_THAT(out, HasSubstr("Mismatch in CRC field"));
-    EXPECT_THAT(out, HasSubstr("BROKEN PACKET START"));
-    EXPECT_THAT(out, HasSubstr("BROKEN PACKET STOP"));
-
-    // Clean up: disable debug so other tests are quiet
-    rxContainer2.SetDebug(false);
+        // Clean up: disable debug so other tests are quiet (callbacks will be destroyed with interface)
+        rxContainer2.SetDebug(false);
+        (void)d; (void)cd;
+    }
 }

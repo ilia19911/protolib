@@ -14,7 +14,8 @@
 #include <stdexcept>
 #include <utility>
 #include <unordered_map>
-
+#include <tuple>
+#include <type_traits>
 #include "prototypes/field/FieldPrototype.hpp"
 #include "prototypes/field/DataField.hpp"
 #include "libraries/crc/crcSoft/CrcSoft.hpp"
@@ -48,6 +49,42 @@ namespace proto
     };
 
     /**
+     * @brief Metafunction to find a field type by its FieldName within a tuple of field types.
+     *
+     * @tparam Tuple  Tuple of concrete field types (not prototypes).
+     * @tparam NAME   Target FieldName to search for.
+     * @tparam Index  Current index (implementation detail).
+     */
+    // Lookup helper that avoids out-of-bounds tuple_element instantiation
+    template<typename Tuple, FieldName NAME, std::size_t Index, bool AtEnd = (Index >= std::tuple_size_v<Tuple>)>
+    struct FieldByNameImpl;
+
+    // End of recursion: no such field
+    template<typename Tuple, FieldName NAME, std::size_t Index>
+    struct FieldByNameImpl<Tuple, NAME, Index, true> {
+        using type = void;
+    };
+
+    // Recursive case
+    template<typename Tuple, FieldName NAME, std::size_t Index>
+    struct FieldByNameImpl<Tuple, NAME, Index, false> {
+        using Curr = std::tuple_element_t<Index, Tuple>;
+        using type = std::conditional_t<
+            (Curr::name_ == NAME),
+            Curr,
+            typename FieldByNameImpl<Tuple, NAME, Index + 1>::type
+        >;
+    };
+
+    // Public alias: preserves the existing FieldByName<...>::type usage
+    template<typename Tuple, FieldName NAME, std::size_t Index = 0>
+    using FieldByName = FieldByNameImpl<Tuple, NAME, Index>;
+
+
+
+
+
+    /**
      * @brief Generic container for protocol fields with CRC and debug support.
      *
      * This class template stores a tuple of protocol field instances, provides methods
@@ -76,6 +113,35 @@ namespace proto
         FieldContainer() = default;
 
         /**
+         * @brief Tuple type with concrete field instances for this container.
+         */
+        using FieldsTuple = typename TransformToFieldsTuple<Fields>::Type;
+
+        /**
+         * @brief Return type deduced from DATA_FIELD at compile time.
+         *
+         * - If the container has a DATA_FIELD and that field satisfies
+         *   `is_data_field_prototype<>::value`, this resolves to the field's `Variant` type.
+         * - If the container has a DATA_FIELD that is a regular field, this resolves to the
+         *   field's `FieldType`.
+         * - If the container has no DATA_FIELD, this resolves to `void`.
+         */
+
+
+        using DataField  = typename FieldByName<FieldsTuple, FieldName::DATA_FIELD>::type;
+
+        using ReturnType =
+          std::remove_const_t<
+              std::remove_reference_t<
+                  decltype(std::declval<const DataField&>().GetCopy())
+              >
+          >;
+
+
+
+
+
+        /**
          * @brief Enable or disable debug mode for the container and its fields.
          *
          * When debug is enabled, additional diagnostic information may be output
@@ -96,14 +162,11 @@ namespace proto
             return debug_;
         }
 
-        /**
-         * @brief Name identifier for the container (optional, user-defined).
-         */
-        const int32_t Name{};
+
         /**
          * @brief The number of fields in the container.
          */
-        static constexpr std::size_t size = std::tuple_size<typename TransformToFieldsTuple<Fields>::Type>::value;
+        static constexpr std::size_t size = std::tuple_size<FieldsTuple>::value;
 
         /**
          * @brief Access a field by its FieldName (compile-time constant).
@@ -151,9 +214,9 @@ namespace proto
          */
         template<FieldName NAME, std::size_t Index = 0>
         static constexpr bool HasField() {
-            if constexpr (Index >= std::tuple_size<typename TransformToFieldsTuple<Fields>::Type>::value) {
+            if constexpr (Index >= std::tuple_size<FieldsTuple>::value) {
                 return false;
-            } else if constexpr (std::tuple_element_t<Index, typename TransformToFieldsTuple<Fields>::Type>::name_ == NAME) {
+            } else if constexpr (std::tuple_element_t<Index, FieldsTuple>::name_ == NAME) {
                 return true;
             } else {
                 return HasField<NAME, Index + 1>();
@@ -190,8 +253,111 @@ namespace proto
          */
         template<typename Func>
         constexpr void for_each_type( Func&& f) {
-            constexpr std::size_t N = std::tuple_size_v<typename TransformToFieldsTuple<Fields>::Type>;
+            constexpr std::size_t N = std::tuple_size_v<FieldsTuple>;
             for_each_type_impl(this->fields_, std::forward<Func>(f), std::make_index_sequence<N>{});
+        }
+
+        // --- Build a tuple of named types deduced the same way as ReturnType
+// Each element keeps the field's compile-time name and the type
+// produced by Field::GetCopy() for that concrete field.
+
+// Helper: deduce raw copy type and normalize it
+        template<class __Field>
+        using __field_copy_raw_t = std::remove_const_t<
+                std::remove_reference_t<
+                        decltype(std::declval<const __Field&>().GetCopy())
+                >>;
+
+// If GetCopy returns pointer -> turn into std::vector<non-const T>
+        template<class T>
+        struct __ptr_to_vec { using type = T; };
+        template<class U>
+        struct __ptr_to_vec<U*> { using type = std::vector<std::remove_const_t<U>>; };
+        template<class U>
+        struct __ptr_to_vec<const U*> { using type = std::vector<std::remove_const_t<U>>; };
+
+// If GetCopy returns std::vector<const T> -> make it std::vector<T>
+        template<class T>
+        struct __strip_const_from_vector { using type = T; };
+        template<class U, class Alloc>
+        struct __strip_const_from_vector<std::vector<U, Alloc>> { using type = std::vector<std::remove_const_t<U>>; };
+
+        template<class __Field>
+        using __field_copy_t = typename __strip_const_from_vector< typename __ptr_to_vec< __field_copy_raw_t<__Field> >::type >::type;
+
+// Named holder: stores compile-time field name and value type
+        template<FieldName __NAME, class __T>
+        struct __NamedCopyType {
+            static constexpr FieldName name_ = __NAME;
+            using value_type = __T;
+        };
+
+// Make a tuple of named copy types for all fields in FieldsTuple
+        template<typename __Tuple>
+        struct __MakeReturnTuple;
+
+        template<typename... __Fields>
+        struct __MakeReturnTuple<std::tuple<__Fields...>> {
+            using Type = std::tuple< __NamedCopyType<__Fields::name_, __field_copy_t<__Fields>>... >;
+        };
+
+// Public alias: tuple of elements with (name_, value_type) matching GetCopy() of each field
+        using ReturnValuesTuple = typename __MakeReturnTuple<FieldsTuple>::Type;
+
+// --- Runtime return tuples with actual copied values ---
+// 1) Tuple of pure value types (without name wrappers)
+        template<typename __Tuple>
+        struct __MakeValueTuple;
+
+        template<typename... __Fields>
+        struct __MakeValueTuple<std::tuple<__Fields...>> {
+            using Type = std::tuple< __field_copy_t<__Fields>... >;
+        };
+
+        using ReturnTuple = typename __MakeValueTuple<FieldsTuple>::Type;
+
+// 2) Named value element that carries compile-time name and a runtime value
+        template<FieldName __NAME, class __T>
+        struct __NamedValue {
+            static constexpr FieldName name_ = __NAME;
+            __T value;  // runtime copy
+        };
+
+// 3) Tuple of named values (compile-time name + runtime value)
+        template<typename __Tuple>
+        struct __MakeNamedValueTuple;
+
+        template<typename... __Fields>
+        struct __MakeNamedValueTuple<std::tuple<__Fields...>> {
+            using Type = std::tuple< __NamedValue<__Fields::name_, __field_copy_t<__Fields>>... >;
+        };
+
+        // --- helpers for GetCopies / GetNamedCopies ---
+        template<std::size_t... Is>
+        [[nodiscard]] ReturnTuple GetCopiesImpl(std::index_sequence<Is...>) const {
+            const auto& tup = this->fields_;
+            return ReturnTuple{ (__normalize_value(std::get<Is>(tup).GetCopy()))... };
+        }
+
+        using NamedReturnTuple = typename __MakeNamedValueTuple<FieldsTuple>::Type;
+
+// Copy every field and return a tuple of raw values
+        [[nodiscard]] ReturnTuple GetCopies() const {
+            return GetCopiesImpl(std::make_index_sequence<std::tuple_size_v<FieldsTuple>>{});
+        }
+
+// Copy every field and return a tuple of named values
+        [[nodiscard]] NamedReturnTuple GetNamedCopies() const {
+            return GetNamedCopiesImpl(std::make_index_sequence<std::tuple_size_v<FieldsTuple>>{});
+        }
+
+        template<std::size_t... Is>
+        [[nodiscard]] NamedReturnTuple GetNamedCopiesImpl(std::index_sequence<Is...>) const {
+            const auto& tup = this->fields_;
+            return NamedReturnTuple{
+                    __NamedValue< std::tuple_element_t<Is, FieldsTuple>::name_,
+                            __field_copy_t< std::tuple_element_t<Is, FieldsTuple> > >{ __normalize_value(std::get<Is>(tup).GetCopy()) }...
+            };
         }
 
     protected:
@@ -202,7 +368,7 @@ namespace proto
         /**
          * @brief Tuple holding all field instances.
          */
-        typename TransformToFieldsTuple<Fields>::Type fields_;
+        FieldsTuple fields_;
         /**
          * @brief Map of field buffer pointers to their offsets (used for serialization/deserialization).
          */
@@ -236,6 +402,21 @@ namespace proto
          * @brief Number of fields in the container (internal constant).
          */
         static constexpr std::size_t N = std::tuple_size<decltype(fields_)>::value;
+
+        // value normalizer for runtime conversion
+        template<class V>
+        static auto __normalize_value(V&& v) { return std::forward<V>(v); }
+        template<class U>
+        static auto __normalize_value(const std::vector<const U>& v) {
+            return std::vector<std::remove_const_t<U>>(v.begin(), v.end());
+        }
+        template<class U>
+        static auto __normalize_value(std::vector<const U>&& v) {
+            return std::vector<std::remove_const_t<U>>(v.begin(), v.end());
+        }
+
+
+
     };
 
 }

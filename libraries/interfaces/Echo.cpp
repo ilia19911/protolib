@@ -3,6 +3,7 @@
 namespace proto::interface{
 
     bool echoInterface::Write(Span<uint8_t> buffer, std::chrono::milliseconds timeout) {
+        (void)timeout;
         if (!is_open_) {
             std::cerr << "Interface is not Open!" << std::endl;
             return false;
@@ -35,12 +36,9 @@ namespace proto::interface{
         return true;
     }
 
-//    bool echoInterface::AddReceiveCallback(Delegate callback) {
-//        callbacks_.push_back(callback);
-//        return true;
-//    }
-
     int echoInterface::Read(uint8_t *buffer, size_t count) {
+        (void)buffer;
+        (void)count;
         return 0;
     }
 }

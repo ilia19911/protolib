@@ -46,10 +46,10 @@ namespace testhelpers {
     template <typename Field>
     ::testing::AssertionResult FieldPointsTo(const Field& f, const void* base, size_t offset) {
         auto* expect = static_cast<const uint8_t*>(base) + offset;
-        if (f.GetData() == reinterpret_cast<const decltype(f.GetData())>(expect))
+        if (f.GetPtr() == reinterpret_cast<const decltype(f.GetPtr())>(expect))
             return ::testing::AssertionSuccess();
         return ::testing::AssertionFailure()
-                << "Field points to " << static_cast<const void*>(f.GetData())
+                << "Field points to " << static_cast<const void*>(f.GetPtr())
                 << " but expected " << static_cast<const void*>(expect);
     }
 
@@ -60,7 +60,7 @@ namespace testhelpers {
     void ExpectIterEqualsRaw(const Field& fld) {
         size_t i = 0;
         for (auto b : fld) {
-            ASSERT_EQ(b, reinterpret_cast<const uint8_t*>(fld.GetData())[i++]);
+            ASSERT_EQ(b, reinterpret_cast<const uint8_t*>(fld.GetPtr())[i++]);
         }
     }
 
@@ -184,7 +184,7 @@ TEST_F(FieldsTestSuite, ConstValuePresentAndApply) {
 
         testhelpers::fill(buf(), sizeof(buffer_), 0x00);
         id.TestApplyConst();
-        EXPECT_TRUE(testhelpers::MemEqual(id.GetData(), id.const_value_, id.GetSize()));
+        EXPECT_TRUE(testhelpers::MemEqual(id.GetPtr(), id.const_value_, id.GetSize()));
     }
 }
 
@@ -207,20 +207,20 @@ TEST_F(FieldsTestSuite, SetValuesAndIterators) {
 
         // LEN field
         len.TestSet(uint8_t{125});
-        EXPECT_EQ(*len.GetData(), 125);
+        EXPECT_EQ(*len.GetPtr(), 125);
 
         // ALEN field (~125 with explicit cast to avoid narrowing warning)
         alen.TestSet(static_cast<uint8_t>(~uint8_t{125}));
-        EXPECT_EQ(*alen.GetData(), static_cast<uint8_t>(~uint8_t{125}));
+        EXPECT_EQ(*alen.GetPtr(), static_cast<uint8_t>(~uint8_t{125}));
 
         // DATA field
         proto::test::dataType dv{};
         data.TestSet(dv);
-        EXPECT_TRUE(testhelpers::MemEqual(buf() + data.TestOffset(), data.GetData(), data.GetSize()));
+        EXPECT_TRUE(testhelpers::MemEqual(buf() + data.TestOffset(), data.GetPtr(), data.GetSize()));
 
         // CRC field
         crc.TestSet(uint16_t{0x1234});
-        EXPECT_EQ(*crc.GetData(), 0x1234);
+        EXPECT_EQ(*crc.GetPtr(), 0x1234);
 
         // Iterators
         testhelpers::ExpectIterEqualsRaw(id);
@@ -250,14 +250,14 @@ TEST_F(FieldsTestSuite, DataField_VariantAndLookups) {
 
     // Not set → monostate
     {
-        auto v0 = df.GetVariant();
+        auto v0 = df.GetCopy();
         EXPECT_TRUE(std::holds_alternative<std::monostate>(v0));
     }
 
     // Fixed-size type
     ASSERT_TRUE(df.SetId(1));
     {
-        auto v1 = df.GetVariant();
+        auto v1 = df.GetCopy();
         EXPECT_TRUE(std::holds_alternative<proto::test::dataType>(v1));
         EXPECT_EQ(df.GetSize(), sizeof(proto::test::dataType));
     }
@@ -265,16 +265,16 @@ TEST_F(FieldsTestSuite, DataField_VariantAndLookups) {
     // Pointer type → just verify the variant holds uint8_t*
     ASSERT_TRUE(df.SetId(2));
     {
-        auto v2 = df.GetVariant();
-        EXPECT_TRUE(std::holds_alternative<uint8_t*>(v2));
+        auto v2 = df.GetCopy();
+        EXPECT_TRUE(std::holds_alternative<std::vector<uint8_t>>(v2));
         // Size for pointer payload is managed externally (container); no size check here.
     }
 
     // Empty data → monostate and size 0
     ASSERT_TRUE(df.SetId(3));
     {
-        auto v3 = df.GetVariant();
-        EXPECT_TRUE(std::holds_alternative<std::monostate>(v3));
+        auto v3 = df.GetCopy();
+        EXPECT_TRUE(std::holds_alternative<proto::EmptyDataType>(v3));
         EXPECT_EQ(df.GetSize(), 0u);
     }
 
@@ -305,14 +305,14 @@ TEST_F(FieldsTestSuite, DataField_EnumIdsWork) {
 
     // Not set → monostate
     {
-        auto v0 = df.GetVariant();
+        auto v0 = df.GetCopy();
         EXPECT_TRUE(std::holds_alternative<std::monostate>(v0));
     }
 
     // A → fixed-size
     ASSERT_TRUE(df.SetId(static_cast<int>(Pk::A)));
     {
-        auto v = df.GetVariant();
+        auto v = df.GetCopy();
         ASSERT_TRUE(std::holds_alternative<proto::test::dataType>(v));
         EXPECT_EQ(df.GetSize(), sizeof(proto::test::dataType));
     }
@@ -320,15 +320,15 @@ TEST_F(FieldsTestSuite, DataField_EnumIdsWork) {
     // B → pointer payload
     ASSERT_TRUE(df.SetId(static_cast<int>(Pk::B)));
     {
-        auto v = df.GetVariant();
-        EXPECT_TRUE(std::holds_alternative<uint8_t*>(v));
+        auto v = df.GetCopy();
+        EXPECT_TRUE(std::holds_alternative<std::vector<uint8_t>>(v));
     }
 
     // C → empty
     ASSERT_TRUE(df.SetId(static_cast<int>(Pk::C)));
     {
-        auto v = df.GetVariant();
-        EXPECT_TRUE(std::holds_alternative<std::monostate>(v));
+        auto v = df.GetCopy();
+        EXPECT_TRUE(std::holds_alternative<proto::EmptyDataType>(v));
         EXPECT_EQ(df.GetSize(), 0u);
     }
 }

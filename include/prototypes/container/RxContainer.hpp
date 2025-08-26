@@ -63,16 +63,7 @@ namespace proto
          */
         using CallbackType = std::function<void(RxContainer<Fields, TCrc>&)>;
         using Delegate = std::shared_ptr<CallbackType>;
-        /**
-         * @brief Helper to allocate a shared_ptr wrapper for a callback.
-         * @param callback User-provided callable to execute on completed frames.
-         * @return Shared pointer that can be retained by user code and passed to interfaces.
-         * @remarks Storing callbacks as weak_ptr prevents reference cycles and cleans up automatically
-         *          when the user drops the last shared_ptr.
-         */
-        static Delegate CreateDelegate(CallbackType callback) {
-            return std::make_shared<CallbackType>(callback);
-        }
+
         /**
          * @brief Constructs an RxContainer and auto-binds default matchers for standard fields.
          *
@@ -150,7 +141,7 @@ namespace proto
                             auto result = this->FillFields<I>( ptr, read);
 
                             if( result == MatchStatus::NOT_MATCH){
-                                if(field.read_count_!=0){
+                                if(field.read_count_!=0 && field.GetSize()!=field.read_count_){
                                     read = 0;
                                 }
                                 if constexpr (I != 0 ){
@@ -186,7 +177,7 @@ namespace proto
                                         };
 
                                         std::cout << "-------------BROKEN PACKET START-------------" << std::endl;
-                                        for (int i = 0; i <= this->field_index_; i++) {
+                                        for (int i = 0; i <= (int)this->field_index_; i++) {
                                             static_for_index(i, f);
                                         }
                                         std::cout << "-------------BROKEN PACKET STOP-------------" << std::endl;
@@ -240,13 +231,10 @@ namespace proto
             size_t byte_to_read = std::min(ptr.size(), field.GetSize() - field.read_count_);
             if (FieldTraits<decltype(field)>::const_value != nullptr){
                 if constexpr (HasFlag(std::remove_reference_t<decltype(field)>::flags_, FieldFlags::REVERSE)){
-                    for(int i = 0; i < byte_to_read; i ++){
+                    for(int i = 0; i < (int)byte_to_read; i ++){
                         if(ptr[i] != field.const_value_[field.GetSize() - 1 - field.read_count_ - i]){
                             ++read;
-                            if(this->IsDebug()){
-//                                std::cout<< "\nMismatch in field: " << ToString(FieldTraits<decltype(field)>::name) << " at position: " << field.read_count_ + i << std::endl;
-//                                std::cout << "Expected: " << (uint8_t)field.const_value_[field.GetSize() - 1 - field.read_count_ - i] << ", Received: " << (uint8_t)ptr[i] << std::endl;
-                            }
+                            if(this->IsDebug()){}
                             return MatchStatus::NOT_MATCH;
                         }
                     }
@@ -254,24 +242,14 @@ namespace proto
                 else{
                     if(std::memcmp(ptr.data(), (uint8_t*)field.const_value_ + field.read_count_, byte_to_read) != 0){
                         ++read;
-                        if(this->IsDebug()){
-//                            std::cout << "\nMismatch in field: " << ToString(FieldTraits<decltype(field)>::name) << " at position: " << field.read_count_ << std::endl;
-//                            std::cout << "Expected: ";
-//                            for(size_t i = 0; i < byte_to_read; i++){
-//                                std::cout << ((uint8_t*)field.const_value_)[field.read_count_ + i] << " ";
-//                            }
-//                            std::cout << ", Received: ";
-//                            for(size_t i = 0; i < field.read_count_ + 1; i++) {
-//                                std::cout << (uint8_t) ptr.data()[i] << " ";
-//                            }
-                        }
+                        if(this->IsDebug()){}
                         return MatchStatus::NOT_MATCH;
                     }
                 }
             }
             read += byte_to_read;
             if constexpr (HasFlag(std::remove_reference_t<decltype(field)>::flags_, FieldFlags::REVERSE)){
-                for(int i = 0; i < byte_to_read; i ++){
+                for(int i = 0; i < (int)byte_to_read; i ++){
                     uint8_t *data = (field.base_ + field.offset_ + field.GetSize()-1) - field.read_count_ -i;
                     *data = ptr.data()[i];
                 }
@@ -282,9 +260,6 @@ namespace proto
             field.read_count_ += byte_to_read;
 
             if(field.read_count_ < field.size_){
-//                if constexpr (HasFlag(FieldTraits<decltype(field)>::flags, FieldFlags::SUPPRESS)){
-//                    return MatchStatus::SUPPRESS;
-//                }
                 return MatchStatus::PROCESSING;
             }
             else if(field.matcher_){
@@ -308,7 +283,7 @@ namespace proto
             auto& container = *static_cast<RxContainer<Fields>*>(obj);
             auto &data_field = container.template Get<FieldName::DATA_FIELD>();
             auto &len_field = container.template Get<FieldName::LEN_FIELD>();
-            auto len = *len_field.GetData();
+            auto len = *len_field.GetPtr();
 
             container.for_each_type( [&](auto& field){
                 if (field.name_ != FieldName::DATA_FIELD) {
@@ -322,7 +297,7 @@ namespace proto
                 if (data_field.size_ != 0 && data_field.size_ != kAnySize) {
                     if (len != data_field.GetSize()) {
                         if(container.IsDebug()){
-                            auto expected = static_cast<unsigned>(*len_field.GetData())
+                            auto expected = static_cast<unsigned>(*len_field.GetPtr())
                                             + (data_field.GetSize() - static_cast<unsigned>(len));
 
                             std::ios_base::fmtflags f(std::cout.flags()); // сохранить формат
@@ -330,8 +305,8 @@ namespace proto
                             std::cout << "\nMismatch in length field (method SetDataLen):\n"
                                       << "  Expected: " << std::dec << static_cast<unsigned>(expected)
                                       << " (0x" << std::hex << std::uppercase << static_cast<unsigned>(expected) << ")\n"
-                                      << "  Received: " << std::dec << static_cast<unsigned>(*len_field.GetData())
-                                      << " (0x" << std::hex << std::uppercase << static_cast<unsigned>(*len_field.GetData()) << ")\n";
+                                      << "  Received: " << std::dec << static_cast<unsigned>(*len_field.GetPtr())
+                                      << " (0x" << std::hex << std::uppercase << static_cast<unsigned>(*len_field.GetPtr()) << ")\n";
 
                             std::cout.flags(f); // восстановить
                         }
@@ -353,8 +328,8 @@ namespace proto
          */
         static MatchStatus CheckAlen(void *obj){
             auto& container = *static_cast<RxContainer<Fields>*>(obj);
-            auto len = *container.template Get<FieldName::LEN_FIELD>().GetData();
-            auto alen = *container.template Get<FieldName::ALEN_FIELD>().GetData();
+            auto len = *container.template Get<FieldName::LEN_FIELD>().GetPtr();
+            auto alen = *container.template Get<FieldName::ALEN_FIELD>().GetPtr();
 
             alen = ~alen;
 
@@ -390,7 +365,7 @@ namespace proto
          */
         static MatchStatus CheckCrc(void *obj){
             auto& container = *static_cast<RxContainer<Fields, TCrc>*>(obj);
-            auto crc_in_field = *container.template Get<FieldName::CRC_FIELD>().GetData();
+            auto crc_in_field = *container.template Get<FieldName::CRC_FIELD>().GetPtr();
             using crc_type = decltype(crc_in_field);
             uint32_t crc = 0;
             container.crc_.Reset();
@@ -398,7 +373,7 @@ namespace proto
             container.for_each_type([&](auto& field){
                 using field_type = typename std::remove_reference<decltype(field)>::type;
                 if constexpr (HasFlag(field_type::flags_, FieldFlags::IS_IN_CRC)) {
-                    auto *data = field.GetData();
+                    auto *data = field.GetPtr();
                     size_t size = field.GetSize();
                     crc = container.crc_.Append(crc, {(uint8_t*)data, size});
                 }
@@ -441,7 +416,7 @@ namespace proto
         static MatchStatus CheckType(void *obj){
             auto& container = *static_cast<RxContainer<Fields>*>(obj);
 
-            int type = *container.template Get<FieldName::TYPE_FIELD>().GetData();
+            int type = *container.template Get<FieldName::TYPE_FIELD>().GetPtr();
             auto& data_field = container.template Get<FieldName::DATA_FIELD>();
 
             if constexpr (is_data_field_prototype<decltype(data_field)>::value) {
