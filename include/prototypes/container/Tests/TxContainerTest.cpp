@@ -72,7 +72,7 @@ protected:
         // Feed RX in protocol field order, exactly the bytes each field owns.
         tx.for_each_type([&](auto& fld){
             const uint8_t* p = (uint8_t*)fld.GetPtr();
-            Span<uint8_t> chunk(const_cast<uint8_t*>(p), fld.GetSize());
+          CustomSpan<uint8_t> chunk(const_cast<uint8_t*>(p), fld.GetSize());
             size_t read = 0;
             rx.Fill(chunk, read);
         });

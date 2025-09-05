@@ -7,10 +7,10 @@
 #include <chrono>
 #include <memory>
 
-#include "Span.hpp"
+#include "CustomSpan.hpp"
 
 namespace proto::interface{
-    using CallbackType = std::function<void(Span<uint8_t> buffer, size_t &read)>;
+    using CallbackType = std::function<void(CustomSpan<uint8_t> buffer, size_t &read)>;
     using Delegate = std::shared_ptr<CallbackType>;
 
     using namespace std::chrono_literals;
@@ -18,7 +18,7 @@ namespace proto::interface{
     class IInterface {
     public:
         explicit IInterface(const char *name):name_(name){};
-        virtual bool Write(Span<uint8_t> buffer, std::chrono::milliseconds timeout = 1s) = 0;
+        virtual bool Write(CustomSpan<uint8_t> buffer, std::chrono::milliseconds timeout = 1s) = 0;
 
         virtual bool IsOpen() = 0;
         virtual bool Open() = 0;

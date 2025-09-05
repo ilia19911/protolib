@@ -12,7 +12,7 @@ class YmodemPrerelease{
 public:
 
     YmodemPrerelease(proto::interface::IInterface& interface): interface_(interface){
-        receive_callback_ = interface_.AddReceiveCallback([this](Span<uint8_t> buffer, size_t &read){
+        receive_callback_ = interface_.AddReceiveCallback([this](CustomSpan<uint8_t> buffer, size_t &read){
             memcpy(receive_buffer, buffer.data(), buffer.size());
             received_count = buffer.size();
             read+=buffer.size();

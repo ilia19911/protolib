@@ -1,11 +1,11 @@
 #include "Crc16Modbus.hpp"
 
-uint32_t Crc16Modbus::Calc(const Span<uint8_t> data) {
+uint32_t Crc16Modbus::Calc(const CustomSpan<uint8_t> data) {
     Reset();
     return Append(crc_, data);
 }
 
-uint32_t Crc16Modbus::Append(uint32_t dump, Span<uint8_t> data) {
+uint32_t Crc16Modbus::Append(uint32_t dump, CustomSpan<uint8_t> data) {
     (void)dump;
     uint8_t *dataPtr = data.data();
     uint8_t ch;

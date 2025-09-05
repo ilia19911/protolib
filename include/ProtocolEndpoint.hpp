@@ -122,7 +122,7 @@ namespace proto{
         void SetInterfaces(proto::interface::IInterface& rx_if,
                            proto::interface::IInterface& tx_if) {
             tx.SetInterface(tx_if);
-            rx_if_cb_ = rx_if.AddReceiveCallback([this](Span<uint8_t> s, size_t& r){
+            rx_if_cb_ = rx_if.AddReceiveCallback([this](CustomSpan<uint8_t> s, size_t& r){
                 rx.Fill(s, r);
             });
         }
