@@ -1,15 +1,15 @@
-#ifndef SPAN_HPP
-#define SPAN_HPP
+#ifndef CUSTOM_SPAN_HPP
+#define CUSTOM_SPAN_HPP
 
 #include <cstddef>
 #include <cstdint>
 #include <cassert>
 
 template<typename T>
-class Span {
+class CustomSpan {
 public:
-    Span() : ptr_(nullptr), size_(0) {}
-    Span(const T* ptr, size_t size) : ptr_(const_cast<T*>(ptr)), size_(size) {}
+    CustomSpan() : ptr_(nullptr), size_(0) {}
+    CustomSpan(const T* ptr, size_t size) : ptr_(const_cast<T*>(ptr)), size_(size) {}
 
     [[nodiscard]] T* data() const { return ptr_; }
     [[nodiscard]] size_t size() const { return size_; }
@@ -23,11 +23,11 @@ public:
     [[nodiscard]] T* begin() const { return ptr_; }
     [[nodiscard]] T* end() const { return ptr_ + size_; }
 
-    [[nodiscard]] Span<T> subspan(size_t offset, size_t count = static_cast<size_t>(-1)) const {
+    [[nodiscard]] CustomSpan<T> subspan(size_t offset, size_t count = static_cast<size_t>(-1)) const {
         assert(offset <= size_);
         size_t new_size = count == static_cast<size_t>(-1) ? size_ - offset : count;
         assert(offset + new_size <= size_);
-        return Span<T>(ptr_ + offset, new_size);
+        return CustomSpan<T>(ptr_ + offset, new_size);
     }
 
 private:
@@ -35,4 +35,4 @@ private:
     size_t size_;
 };
 
-#endif // SPAN_HPP
+#endif // CUSTOM_SPAN_HPP

@@ -11,10 +11,10 @@
 
 namespace proto::interface{
 
-    bool UartLinuxInterface::Write(Span<uint8_t> data, std::chrono::milliseconds timeout) {
+    bool UartLinuxInterface::Write(CustomSpan<uint8_t> data, std::chrono::milliseconds timeout) {
         if (fd_ < 0) return false;
         std::lock_guard<std::mutex> lock(write_mtx);
-        Span<uint8_t> ptr = data;
+      CustomSpan<uint8_t> ptr = data;
         size_t total = 0;
         auto start = std::chrono::steady_clock::now();
 

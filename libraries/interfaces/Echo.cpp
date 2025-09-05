@@ -2,7 +2,7 @@
 
 namespace proto::interface{
 
-    bool echoInterface::Write(Span<uint8_t> buffer, std::chrono::milliseconds timeout) {
+    bool echoInterface::Write(CustomSpan<uint8_t> buffer, std::chrono::milliseconds timeout) {
         (void)timeout;
         if (!is_open_) {
             std::cerr << "Interface is not Open!" << std::endl;

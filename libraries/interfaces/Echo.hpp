@@ -4,7 +4,7 @@
 #include <iostream>
 #include <mutex>
 
-#include "Span.hpp"
+#include "CustomSpan.hpp"
 #include "Interface.hpp"
 
 namespace proto::interface {
@@ -12,7 +12,7 @@ namespace proto::interface {
     public:
         explicit echoInterface() : IInterface("echo interface"), is_open_(false) {}
 
-        bool Write(Span<uint8_t> buffer, std::chrono::milliseconds timeout) override;
+        bool Write(CustomSpan<uint8_t> buffer, std::chrono::milliseconds timeout) override;
 
         bool IsOpen() override;
 

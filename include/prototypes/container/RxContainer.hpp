@@ -27,7 +27,7 @@
 #include <cstring>
 #include <memory>
 
-#include "Span.hpp"
+#include "CustomSpan.hpp"
 #include <functional>
 
 namespace proto
@@ -126,14 +126,14 @@ namespace proto
          * to start searching for the next valid frame boundary. On full frame completion, all valid
          * callbacks are invoked (old expired ones are removed).
          */
-        void Fill(const Span<uint8_t> &src, size_t &read){
-            Span<uint8_t> ptr = src;
+        void Fill(const CustomSpan<uint8_t> &src, size_t &read){
+          CustomSpan<uint8_t> ptr = src;
             MatchStatus result = MatchStatus::NOT_MATCH;
             while(!ptr.empty() )
             {
                 static_for_index(
                         this->field_index_,
-                        [&](auto index_c, Span<uint8_t>& ptr, size_t& read) -> MatchStatus {
+                        [&](auto index_c, CustomSpan<uint8_t>& ptr, size_t& read) -> MatchStatus {
                             read = 0;
                             constexpr std::size_t I = decltype(index_c)::value;
                             auto & field = std::get<I>(this->fields_);
@@ -223,7 +223,7 @@ namespace proto
          *  - Invokes `matcher_` of the field when it completes, enabling length/type/CRC checks to run early.
          */
         template<size_t Index>
-        MatchStatus FillFields( Span<uint8_t>& ptr, size_t& read) {
+        MatchStatus FillFields( CustomSpan<uint8_t>& ptr, size_t& read) {
             auto & field = std::get<Index>(this->fields_);
             if(field.GetSize() == 0){
                 return MatchStatus::MATCH;

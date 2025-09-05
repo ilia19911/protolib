@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Span.hpp"
+#include "CustomSpan.hpp"
 #include "Crc.hpp"
 
 class Crc16Modbus : ICrc{
 public:
-    uint32_t Calc(Span<uint8_t> data) override;
-    uint32_t Append(uint32_t crc, Span<uint8_t> data) override;
+    uint32_t Calc(CustomSpan<uint8_t> data) override;
+    uint32_t Append(uint32_t crc, CustomSpan<uint8_t> data) override;
     void Reset() override;
     Crc16Modbus() : ICrc("crc32 arm module"){}
 

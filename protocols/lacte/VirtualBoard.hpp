@@ -72,7 +72,7 @@ namespace proto::lacte {
 
         template<class HOST_CONTAINER>
         void SetHost(HOST_CONTAINER& host_container){
-            board_interface_send_delegate = from_board_interface.AddReceiveCallback([&](Span<uint8_t> span, size_t &read){
+            board_interface_send_delegate = from_board_interface.AddReceiveCallback([&](CustomSpan<uint8_t> span, size_t &read){
                 host_container.rx.Fill(span, read);
             });
             host_container.SetInterfaces(from_board_interface, from_host_interface);
@@ -84,7 +84,7 @@ namespace proto::lacte {
 
             board_proto.tx.SetInterface(from_board_interface);
 
-            host_interface_send_delegate = from_host_interface.AddReceiveCallback( [this](Span<uint8_t> span, size_t &read){
+            host_interface_send_delegate = from_host_interface.AddReceiveCallback( [this](CustomSpan<uint8_t> span, size_t &read){
                 uint8_t data[span.size()];
                 memcpy(data, span.data(), span.size());
                 board_proto.rx.Fill(span, read);

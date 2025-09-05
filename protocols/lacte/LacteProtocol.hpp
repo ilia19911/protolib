@@ -21,7 +21,7 @@ namespace proto::lacte {
           auto data_field = proto::meta::get_named<proto::FieldName::DATA_FIELD>(answer);
           if(std::holds_alternative<std::vector<uint8_t>>(data_field)){
               std::vector<uint8_t> v = std::get<std::vector<uint8_t>>(data_field);
-              Span<uint8_t> s(v.data(), v.size());
+            CustomSpan<uint8_t> s(v.data(), v.size());
               size_t read = 0;
 
               auto d = params.rx.AddReceiveCallback([&](auto& container){

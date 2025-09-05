@@ -25,7 +25,7 @@
 
 #include "prototypes/field/FieldInfo.hpp"
 #include "prototypes/container/FieldContainer.hpp"
-#include "Span.hpp"
+#include "CustomSpan.hpp"
 #include "Interface.hpp"
 
 namespace proto

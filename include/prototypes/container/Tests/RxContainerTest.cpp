@@ -9,7 +9,7 @@
 #include "Prototypes.hpp"
 #include "CrcSoft.hpp"
 #include "Crc16Modbus.hpp"
-#include "Span.hpp"
+#include "CustomSpan.hpp"
 
 namespace {
 // --- Local test payloads (replace legacy testType*, RxBufferTest, GetTestPack) ---
@@ -119,11 +119,11 @@ TEST_F(RxContainerSuite, Reset_OffsetsGoToZero_ThenRebuiltOnFill) {
 
     // Feed all but the last byte – callback must NOT fire yet
     size_t read = 0;
-    rx.Fill(Span<uint8_t>(RxContainerSuite::tx_simple_, packetSize - 1), read);
+    rx.Fill(CustomSpan<uint8_t>(RxContainerSuite::tx_simple_, packetSize - 1), read);
     EXPECT_FALSE(received_) << "Callback fired before full packet arrived";
 
     // Feed the last byte – callback MUST fire
-    rx.Fill(Span<uint8_t>(RxContainerSuite::tx_simple_ + (packetSize - 1), 1), read);
+    rx.Fill(CustomSpan<uint8_t>(RxContainerSuite::tx_simple_ + (packetSize - 1), 1), read);
     EXPECT_TRUE(received_) << "Callback didn't fire on full packet";
 
     // After Reset() every field offset must be zero again
@@ -170,7 +170,7 @@ TEST_F(RxContainerSuite, Fill_OffsetsProgressOnSameBuffer) {
     ASSERT_EQ(s_id + s_len + s_alen + s_data + s_crc, packetSize);
 
     size_t off = 0, read = 0;
-    auto feed = [&](size_t n){ rx.Fill(Span<uint8_t>(RxContainerSuite::tx_simple_ + off, n), read); off += read; };
+    auto feed = [&](size_t n){ rx.Fill(CustomSpan<uint8_t>(RxContainerSuite::tx_simple_ + off, n), read); off += read; };
 
     feed(s_id);
     feed(s_len);
@@ -210,7 +210,7 @@ TEST_F(RxContainerSuite, Debug_MismatchPathsAreCovered) {
         std::vector<uint8_t> tmp(RxContainerSuite::tx_simple_, RxContainerSuite::tx_simple_ + packetSize);
         corrupter(tmp);
         size_t read = 0;
-        rx.Fill(Span<uint8_t>(tmp.data(), tmp.size()), read);
+        rx.Fill(CustomSpan<uint8_t>(tmp.data(), tmp.size()), read);
         EXPECT_FALSE(received_) << "Corrupted packet unexpectedly accepted";
     };
 
@@ -248,7 +248,7 @@ TEST_F(RxContainerSuite, Debug_MismatchPathsAreCovered) {
         proto::MakeFieldInfo<FieldName::DATA_FIELD>(&kTestData1, sizeof(kTestData1))
     );
     size_t read = 0;
-    rx.Fill(Span<uint8_t>(RxContainerSuite::tx_simple_, ok), read);
+    rx.Fill(CustomSpan<uint8_t>(RxContainerSuite::tx_simple_, ok), read);
     EXPECT_TRUE(received_) << "Valid packet not accepted";
 }
 
@@ -300,7 +300,7 @@ TEST_F(RxContainerSuite, Debug_MismatchPathsCovered_ComplexLayout) {
         std::vector<uint8_t> tmp(RxContainerSuite::tx_complex_, RxContainerSuite::tx_complex_ + n);
         tmp[4] ^= 0x01;
         StdCapture cap;
-        size_t read = 0; rx2.Fill(Span<uint8_t>(tmp.data(), tmp.size()), read);
+        size_t read = 0; rx2.Fill(CustomSpan<uint8_t>(tmp.data(), tmp.size()), read);
         const std::string log = cap.Get();
         EXPECT_FALSE(received_);
         EXPECT_NE(log.find("Mismatch in ALEN field"), std::string::npos);
@@ -314,7 +314,7 @@ TEST_F(RxContainerSuite, Debug_MismatchPathsCovered_ComplexLayout) {
         std::vector<uint8_t> tmp(RxContainerSuite::tx_complex_, RxContainerSuite::tx_complex_ + n);
         tmp[5] = 0; // invalid type
         StdCapture cap;
-        size_t read = 0; rx2.Fill(Span<uint8_t>(tmp.data(), tmp.size()), read);
+        size_t read = 0; rx2.Fill(CustomSpan<uint8_t>(tmp.data(), tmp.size()), read);
         const std::string log = cap.Get();
         EXPECT_FALSE(received_);
         EXPECT_NE(log.find("Incorrect type received"), std::string::npos);
@@ -328,7 +328,7 @@ TEST_F(RxContainerSuite, Debug_MismatchPathsCovered_ComplexLayout) {
         std::vector<uint8_t> tmp(RxContainerSuite::tx_complex_, RxContainerSuite::tx_complex_ + n);
         tmp.back() ^= 0xFF;
         StdCapture cap;
-        size_t read = 0; rx2.Fill(Span<uint8_t>(tmp.data(), tmp.size()), read);
+        size_t read = 0; rx2.Fill(CustomSpan<uint8_t>(tmp.data(), tmp.size()), read);
         const std::string log = cap.Get();
         EXPECT_FALSE(received_);
         EXPECT_NE(log.find("Mismatch in CRC field"), std::string::npos);
@@ -339,7 +339,7 @@ TEST_F(RxContainerSuite, Debug_MismatchPathsCovered_ComplexLayout) {
     {
         received_ = false; rx2.Reset();
         const size_t n = send_ok(2);
-        size_t read = 0; rx2.Fill(Span<uint8_t>(RxContainerSuite::tx_complex_, n), read);
+        size_t read = 0; rx2.Fill(CustomSpan<uint8_t>(RxContainerSuite::tx_complex_, n), read);
         EXPECT_TRUE(received_);
         // Verify variant selection captured in the receive handler
         EXPECT_TRUE(std::holds_alternative<proto::test::dataType2>(last_variant_));
@@ -375,7 +375,7 @@ TEST_F(RxContainerSuite, Complex_CRCReverse_ByteSwapBreaksPacket) {
                 proto::MakeFieldInfo<FieldName::DATA_FIELD>(&kTestData2, sizeof(kTestData2))
         );
         size_t read = 0;
-        rx2.Fill(Span<uint8_t>(RxContainerSuite::tx_complex_, n), read);
+        rx2.Fill(CustomSpan<uint8_t>(RxContainerSuite::tx_complex_, n), read);
         EXPECT_TRUE(got) << "Valid complex packet was not accepted";
     }
 
@@ -392,7 +392,7 @@ TEST_F(RxContainerSuite, Complex_CRCReverse_ByteSwapBreaksPacket) {
 
         StdCapture cap;
         size_t read = 0;
-        rx2.Fill(Span<uint8_t>(tmp.data(), tmp.size()), read);
+        rx2.Fill(CustomSpan<uint8_t>(tmp.data(), tmp.size()), read);
         const std::string log = cap.Get();
 
         EXPECT_FALSE(got) << "Packet with swapped CRC bytes was incorrectly accepted";

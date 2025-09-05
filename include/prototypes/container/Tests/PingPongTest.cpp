@@ -101,7 +101,7 @@ TEST(PingPongContainerTest, NoiseType1){
     };
 
     auto task = [&](auto &noiseData){
-        interface.Write(Span<uint8_t>{noiseData, sizeof(noiseData)}, 1s);
+        interface.Write(CustomSpan<uint8_t>{noiseData, sizeof(noiseData)}, 1s);
         auto r = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType));
         auto r_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r);
         assertEqual(r_data_field, testType);
@@ -185,7 +185,7 @@ TEST(PingPongContainerTest, NoiseType2){
     };
 
     auto task = [&](auto &noiseData){
-        interface.Write(Span<uint8_t>{noiseData, sizeof(noiseData)}, 1s);
+        interface.Write(CustomSpan<uint8_t>{noiseData, sizeof(noiseData)}, 1s);
         auto r = protocol.Request(MakeFieldInfo<FieldName::DATA_FIELD>(&testType2));
         auto r_data_field = meta::get_named<proto::FieldName::DATA_FIELD>(r);
 
@@ -223,7 +223,7 @@ TEST(PingPongContainerTest, NoiseType2){
         static RxContainer<proto_fields2Rx> rxContainer2{};
         static TxContainer<proto_fields2Tx> txContainer2{};
 
-        auto transmitHandler = [](Span<uint8_t> span, size_t &read){
+        auto transmitHandler = [](CustomSpan<uint8_t> span, size_t &read){
             // Aggregate all parts of one frame and send as a single buffer.
             // Complex layout emits exactly 6 parts: ID, LEN, ALEN, TYPE, DATA, CRC.
             static std::array<uint8_t, 512> frame_buf{};
@@ -244,7 +244,7 @@ TEST(PingPongContainerTest, NoiseType2){
                 }
 
                 // Feed the entire corrupted frame to RX in a single Fill call
-                Span<uint8_t> full{frame_buf.data(), acc};
+              CustomSpan<uint8_t> full{frame_buf.data(), acc};
                 rxContainer2.Fill(full, read);
 
                 // Reset aggregation state for the next frame

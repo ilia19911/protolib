@@ -24,11 +24,11 @@ namespace proto::lacte::Tests{
 
         uint8_t test_buffer[100] = {0xff, 0x00};
         int read = 0;
-        Span<uint8_t> test_span(test_buffer, sizeof(test_buffer));
+      CustomSpan<uint8_t> test_span(test_buffer, sizeof(test_buffer));
         board.from_host_interface.Write(test_span, std::chrono::milliseconds{1000});
 
         uint8_t buff[] = {0xff, 0xaa, 0x0d, 0x02, 0x32, 0xff, 0xd8, 0x05, 0x47, 0x50, 0x35, 0x32, 0x30, 0x64, 0x24, 0x57, 0x9e, 0xad};
-        Span<uint8_t> test_span2(buff, sizeof(buff));
+      CustomSpan<uint8_t> test_span2(buff, sizeof(buff));
         board.from_board_interface.Write(test_span2, std::chrono::milliseconds{1000});
 
         auto request = [&](auto type, auto&& answer_type)->void{
