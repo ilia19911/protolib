@@ -1,3 +1,10 @@
+# [1.0.0-dev.12](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.11...v1.0.0-dev.12) (2025-09-05)
+
+
+### Bug Fixes
+
+* **span:** переименовал кастомный спан так как были ошибки микса со стандартным ([a1e2b1d](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/commit/a1e2b1d82380e010da709beecbf8fc23cfd8da2d))
+
 # [1.0.0-dev.11](https://gitlab.insitechdev.ru/comfort/embedded/libraries/protolib/compare/v1.0.0-dev.10...v1.0.0-dev.11) (2025-08-26)
 
 
