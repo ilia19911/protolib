@@ -1,10 +1,10 @@
 include:
   - project: 'ComFort/embedded/devops/ci-templates'
-    ref: develop        # или нужная ветка/тег
+    ref: feat/application        # или нужная ветка/тег
     file: '/cpp-basic-pipeline.yml'
 
 # при необходимости можно переопределить переменные/образ
 variables:
   CMAKE_BUILD_TYPE: "Release"
   PKG_NAME: "protolib"
-
+  TYPE: "library"

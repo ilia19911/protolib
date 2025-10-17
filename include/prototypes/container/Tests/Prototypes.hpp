@@ -1,38 +1,14 @@
 #pragma once
 
-#include "Field.hpp"
-#include "FieldContainer.hpp"
-#include "RxContainer.hpp"
-#include "TxContainer.hpp"
-#include "FieldPrototypes.hpp"
+#include "ProtocolEndpoint.hpp"
+#include "TestFieldPrototypes.hpp"
+#include "TestFields.hpp"
 
+namespace proto::test{
 
-template<typename Fields>
-class TestRxContainer : public proto::RxContainer<Fields> {
-public:
-//    void SetOffset
-    void Reset() {
-        proto::FieldContainer<Fields>::Reset();
-    }
-};
+    template<uint8_t *RX_BASE, uint8_t *TX_BASE>
+    class SympleProtocol: public ::proto::ProtocolEndpoint<typename SympleFields<RX_BASE>::proto_fields, typename SympleFields<TX_BASE>::proto_fields>{};
 
-template<typename Fields>
-class TestTxContainer : public proto::TxContainer<Fields> {
-
-};
-
-extern TestRxContainer<proto::test::proto_fields> rxContainer;
-extern TestTxContainer<proto::test::proto_fields> txContainer;
-extern TestRxContainer<proto::test::proto_fields2> rxContainer2;
-extern TestTxContainer<proto::test::proto_fields2> txContainer2;
-
-
-
-extern uint8_t TxBufferTest[100];
-extern uint8_t RxBufferTest[100];
-extern proto::test::dataType testType;
-extern proto::test::dataType2 testType2;
-extern proto::test::dataType3 testType3;
-
-extern size_t GetTestPack(uint8_t* ptr, proto::test::dataType& obj);
-extern size_t GetTestPack2(uint8_t* ptr, proto::test::dataType2& obj);
+    template<uint8_t *RX_BASE, uint8_t *TX_BASE>
+    class ComplexProtocol:  public ::proto::ProtocolEndpoint<typename ComplexFields<RX_BASE>::proto_fields, typename ComplexFields<TX_BASE>::proto_fields>{};
+}

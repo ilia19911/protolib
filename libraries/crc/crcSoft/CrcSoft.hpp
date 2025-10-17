@@ -30,13 +30,10 @@ public:
     }
     void Reset() override;
 
-  uint32_t Calc(Span<uint8_t>) override;
-  uint32_t Append(uint32_t crc, Span<uint8_t>) override;
+  uint32_t Calc(CustomSpan<uint8_t>) override;
+  uint32_t Append(uint32_t crc, CustomSpan<uint8_t>) override;
 private:
-  uint32_t crc32_table[256];
-  uint32_t crc32r_table[256];
-
-
-
+  uint32_t crc32_table[256]{};
+  uint32_t crc32r_table[256]{};
 };
 

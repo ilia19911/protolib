@@ -5,7 +5,7 @@
 #include <mutex>
 #include <thread>
 
-#include "Span.hpp"
+#include "CustomSpan.hpp"
 #include "Interface.hpp"
 
 namespace proto::interface {
@@ -13,7 +13,7 @@ namespace proto::interface {
     public:
         explicit UartLinuxInterface() : IInterface("uart linux interface"), is_open_(false) {}
 
-        bool Write(Span<uint8_t> buffer, std::chrono::milliseconds timeout) override;
+        bool Write(CustomSpan<uint8_t> buffer, std::chrono::milliseconds timeout) override;
 
         bool IsOpen() override;
 
@@ -23,18 +23,19 @@ namespace proto::interface {
 
         bool Close() override;
 
-        bool AddReceiveCallback(receiveDelegate callback) override ;
+//        bool AddReceiveCallback(Delegate) override ;
 
     private:
-        int fd_;
+        int fd_{-1};
         std::mutex write_mtx;
         std::mutex read_mtx;
-        bool is_open_;
-        std::vector<receiveDelegate> callbacks_;
-        uint8_t receive_buffer_[1000];
+        bool is_open_{false};
+
+        uint8_t receive_buffer_[1000]{};
 
         std::thread receive_thread_;
-        void UartReaderThread();
+
+        int UartReaderThread();
         int Read(uint8_t*, size_t) override;
     };
 }

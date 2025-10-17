@@ -8,17 +8,17 @@
 
 #include "Interface.hpp"
 
-class Ymodem{
+class YmodemPrerelease{
 public:
 
-    Ymodem(proto::interface::IInterface& interface): interface(interface){
-        auto receiveCallback = [this](Span<uint8_t> buffer, size_t &read){
+    YmodemPrerelease(proto::interface::IInterface& interface): interface_(interface){
+        receive_callback_ = interface_.AddReceiveCallback([this](CustomSpan<uint8_t> buffer, size_t &read){
             memcpy(receive_buffer, buffer.data(), buffer.size());
             received_count = buffer.size();
+            read+=buffer.size();
             received = true;
             cv.notify_all();
-        };
-        interface.AddReceiveCallback(receiveCallback);
+        });
     };
     /**
  * Отправка файла по протоколу YMODEM.
@@ -26,7 +26,8 @@ public:
     int send(const std::string& filepath);
 
 private:
-    proto::interface::IInterface& interface;
+    proto::interface::Delegate receive_callback_;
+    proto::interface::IInterface& interface_;
     uint8_t receive_buffer[255]{};
     size_t received_count{};
     bool received{false};
