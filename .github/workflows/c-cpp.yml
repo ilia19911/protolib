@@ -6,44 +6,32 @@ on:
   pull_request:
   workflow_dispatch:
 
-# чтобы новые пуши отменяли старые билды
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  # ==== аналоги твоих GitLab variables ====
   CMAKE_BUILD_TYPE: Release
   NPM_CONFIG_FUND: "false"
   NPM_CONFIG_AUDIT: "false"
 
-  # имена/URL для Conan remote — значения бери из Secrets
   CONAN_REMOTE_NAME: insitech
   CONAN_REMOTE_URL: ${{ secrets.CONAN_REMOTE_URL }}
 
-  # по умолчанию версия для нерелизных веток
-  # (заменим на реальную из semantic-release, когда будет доступна)
   DEFAULT_APP_VERSION: "0.0.0-${{ github.ref_name }}.${{ github.sha }}"
 
-  # пользовательские флаги как и раньше (можно переопределять в UI → Variables)
   EXTRA_CMAKE_FLAGS_X86: ""
   EXTRA_CMAKE_FLAGS_ARM: ""
   EXTRA_BUILD_FLAGS_X86: ""
   EXTRA_BUILD_FLAGS_ARM: ""
 
-  # куда складывать сборку
   BUILD_DIR_X86: build_x86
   BUILD_DIR_TARGET: build_target
 
-  # если используешь self-hosted раннер
-  # меняй на ubuntu-latest, если хочешь SaaS раннер от GitHub
-  RUNS_ON: "self-hosted, Linux, X64"
-
 jobs:
-  # ----------- подготовка: проверка окружения и настройка Conan remote -----------
   check_env_vars:
     name: Prepare tools & Conan
-    runs-on: [${{ env.RUNS_ON }}]
+    runs-on: [self-hosted, Linux, X64]  # ← явные метки
     steps:
       - uses: actions/checkout@v4
         with:
@@ -55,7 +43,7 @@ jobs:
           sudo apt-get install -y cmake ninja-build g++ make lcov gcovr python3-pip
           python3 -m pip install --user --upgrade pip
           python3 -m pip install --user conan
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           conan --version
 
       - name: Validate required secrets
@@ -86,17 +74,16 @@ jobs:
           conan remote enable "${CONAN_REMOTE_NAME}" || true
           conan remote login "${CONAN_REMOTE_NAME}" "${NEXUS_USER}" -p "${NEXUS_PASS}"
 
-  # ----------- вычисление версии через semantic-release (dry-run) -----------
   compute_version:
     name: Compute version (semantic-release dry-run)
-    runs-on: [${{ env.RUNS_ON }}]
+    runs-on: [self-hosted, Linux, X64]
     needs: [check_env_vars]
     outputs:
       VERSION: ${{ steps.out.outputs.VERSION }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0       # semantic-release любит полный git
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -121,13 +108,11 @@ jobs:
           if [ -z "$VERSION" ]; then
             VERSION="${{ env.DEFAULT_APP_VERSION }}"
           fi
-          echo "VERSION=$VERSION"
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
 
-  # ----------- build x86 (coverage включён, тесты ON) -----------
   build_x86:
     name: Build x86
-    runs-on: [${{ env.RUNS_ON }}]
+    runs-on: [self-hosted, Linux, X64]
     needs: [check_env_vars, compute_version]
     env:
       PROJECT_SEMVER: ${{ needs.compute_version.outputs.VERSION }}
@@ -164,10 +149,9 @@ jobs:
           name: build_x86
           path: ${{ env.BUILD_DIR_X86 }}/
 
-  # ----------- build target (ARM и т.п., тесты OFF, coverage OFF) -----------
   target_build:
     name: Build target
-    runs-on: [${{ env.RUNS_ON }}]
+    runs-on: [self-hosted, Linux, X64]
     needs: [check_env_vars, compute_version]
     env:
       PROJECT_SEMVER: ${{ needs.compute_version.outputs.VERSION }}
@@ -203,10 +187,9 @@ jobs:
           name: build_target
           path: ${{ env.BUILD_DIR_TARGET }}/
 
-  # ----------- tests (ctest + JUnit) -----------
   test:
     name: Tests
-    runs-on: [${{ env.RUNS_ON }}]
+    runs-on: [self-hosted, Linux, X64]
     needs: [build_x86]
     steps:
       - uses: actions/checkout@v4
@@ -227,10 +210,9 @@ jobs:
           name: junit
           path: ${{ env.BUILD_DIR_X86 }}/junit.xml
 
-  # ----------- coverage (lcov+gcovr, html + cobertura) -----------
   coverage:
     name: Coverage
-    runs-on: [${{ env.RUNS_ON }}]
+    runs-on: [self-hosted, Linux, X64]
     needs: [test]
     steps:
       - uses: actions/checkout@v4
@@ -260,19 +242,17 @@ jobs:
             ${{ env.BUILD_DIR_X86 }}/coverage.xml
             ${{ env.BUILD_DIR_X86 }}/coverage.txt
 
-  # ----------- publish to Conan (только main / develop / testing) -----------
   conan_publish:
     name: Conan publish
-    runs-on: [${{ env.RUNS_ON }}]
+    runs-on: [self-hosted, Linux, X64]
     needs: [check_env_vars, target_build, compute_version]
-    if: contains('refs/heads/main,refs/heads/develop,refs/heads/testing', github.ref)
+    if: startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/heads/develop') || startsWith(github.ref, 'refs/heads/testing')
     env:
       VERSION: ${{ needs.compute_version.outputs.VERSION }}
       CONAN_REMOTE_NAME: ${{ env.CONAN_REMOTE_NAME }}
       CONAN_REMOTE_URL: ${{ env.CONAN_REMOTE_URL }}
       NEXUS_USER: ${{ secrets.NEXUS_USER }}
       NEXUS_PASS: ${{ secrets.NEXUS_PASS }}
-      # !! ВАЖНО: задай PKG_NAME в "Actions → Variables" или поменяй логику ниже
       PKG_NAME: ${{ vars.PKG_NAME }}
     steps:
       - uses: actions/checkout@v4
@@ -287,24 +267,23 @@ jobs:
         run: |
           conan profile detect --force || true
           conan profile update settings.build_type="${CMAKE_BUILD_TYPE}" default || true
+          if [ -z "${PKG_NAME}" ]; then
+            echo "❌ PKG_NAME is not set. Define it in Actions → Variables."
+            exit 1
+          fi
           echo "📦 Creating ${PKG_NAME}/${VERSION}"
           conan create . --version="${VERSION}" -s:h build_type="${CMAKE_BUILD_TYPE}"
 
       - name: Upload to remote
         run: |
-          if [ -z "${PKG_NAME}" ]; then
-            echo "❌ PKG_NAME is not set. Define it in Actions → Variables."
-            exit 1
-          fi
           echo "➡️ Uploading ${PKG_NAME}/${VERSION} to ${CONAN_REMOTE_NAME}"
           conan upload "${PKG_NAME}/${VERSION}" -r "${CONAN_REMOTE_NAME}" --confirm --check
 
-  # ----------- semantic-release (реальный релиз) -----------
   semantic_release_real:
     name: semantic-release (real)
-    runs-on: [${{ env.RUNS_ON }}]
+    runs-on: [self-hosted, Linux, X64]
     needs: [compute_version]
-    if: contains('refs/heads/main,refs/heads/develop,refs/heads/testing', github.ref)
+    if: startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/heads/develop') || startsWith(github.ref, 'refs/heads/testing')
     steps:
       - uses: actions/checkout@v4
         with:
